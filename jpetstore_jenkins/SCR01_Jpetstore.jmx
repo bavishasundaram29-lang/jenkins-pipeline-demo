@@ -16,12 +16,12 @@
           </elementProp>
           <elementProp name="SCR01_thread" elementType="Argument">
             <stringProp name="Argument.name">SCR01_thread</stringProp>
-            <stringProp name="Argument.value">1</stringProp>
+            <stringProp name="Argument.value">5</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="SCR01_iteration" elementType="Argument">
             <stringProp name="Argument.name">SCR01_iteration</stringProp>
-            <stringProp name="Argument.value">1</stringProp>
+            <stringProp name="Argument.value">2</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="SCR01_rampup" elementType="Argument">
