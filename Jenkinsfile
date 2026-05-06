@@ -9,6 +9,12 @@ pipeline {
             }
         }
 
+        stage('Clean Old Report') {
+            steps {
+                bat 'if exist report rmdir /s /q report'
+            }
+        }
+
         stage('Run JMeter Test') {
             steps {
                 bat """
@@ -33,7 +39,7 @@ pipeline {
 
     post {
         success {
-            echo "JMeter report published in Jenkins UI"
+            echo "JMeter report published successfully"
         }
         failure {
             echo "Build failed"
