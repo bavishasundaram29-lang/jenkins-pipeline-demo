@@ -9,9 +9,12 @@ pipeline {
             }
         }
 
-        stage('Clean Old Report') {
+        stage('Clean Old Files') {
             steps {
-                bat 'if exist report rmdir /s /q report'
+                bat '''
+                if exist report rmdir /s /q report
+                if exist results.jtl del /f /q results.jtl
+                '''
             }
         }
 
