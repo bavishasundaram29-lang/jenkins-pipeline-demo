@@ -21,7 +21,12 @@ pipeline {
         stage('Run JMeter Test') {
             steps {
                 bat """
-                C:\\apache-jmeter-5.6.3\\apache-jmeter-5.6.3\\bin\\jmeter.bat -n -t jpetstore_jenkins/SCR01_Jpetstore.jmx -l results.jtl -e -o report
+                C:\\apache-jmeter-5.6.3\\apache-jmeter-5.6.3\\bin\\jmeter.bat ^
+                -n ^
+                -t jpetstore_jenkins/SCR01_Jpetstore.jmx ^
+                -l results.jtl ^
+                -Jjmeter.save.saveservice.output_format=csv ^
+                -e -o report
                 """
             }
         }
@@ -42,10 +47,10 @@ pipeline {
 
     post {
         success {
-            echo "JMeter report published successfully"
+            echo "JMeter report published successfully in Jenkins UI"
         }
         failure {
-            echo "Build failed"
+            echo "Build failed. Check logs."
         }
     }
 }
