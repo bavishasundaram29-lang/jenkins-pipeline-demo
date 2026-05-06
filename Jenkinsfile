@@ -5,15 +5,14 @@ pipeline {
 
         stage('Checkout Code') {
             steps {
-                // Jenkins will automatically checkout from GitHub (no need to duplicate)
-                echo "Code checkout completed"
+                echo "Code checkout completed (handled by Jenkins automatically)"
             }
         }
 
         stage('Run JMeter Test') {
             steps {
                 bat """
-                bat "C:\\apache-jmeter-5.6.3\\apache-jmeter-5.6.3\\bin\\jmeter.bat -n -t test.jmx -l results.jtl -e -o report"
+                C:\\apache-jmeter-5.6.3\\apache-jmeter-5.6.3\\bin\\jmeter.bat -n -t test.jmx -l results.jtl -e -o report
                 """
             }
         }
