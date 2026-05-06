@@ -5,7 +5,7 @@ pipeline {
 
         stage('Checkout Code') {
             steps {
-                echo "Code checkout completed (handled by Jenkins automatically)"
+                echo "Code checkout completed"
             }
         }
 
@@ -17,19 +17,26 @@ pipeline {
             }
         }
 
-        stage('Archive Report') {
+        stage('Publish Report') {
             steps {
-                archiveArtifacts artifacts: 'report/**', fingerprint: true
+                publishHTML([
+                    reportDir: 'report',
+                    reportFiles: 'index.html',
+                    reportName: 'JMeter Report',
+                    keepAll: true,
+                    alwaysLinkToLastBuild: true,
+                    allowMissing: false
+                ])
             }
         }
     }
 
     post {
         success {
-            echo "JMeter test executed successfully. Report generated."
+            echo "JMeter report published in Jenkins UI"
         }
         failure {
-            echo "Build failed. Please check errors."
+            echo "Build failed"
         }
     }
 }
