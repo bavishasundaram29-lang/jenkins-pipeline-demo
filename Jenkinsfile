@@ -3,12 +3,6 @@ pipeline {
 
     stages {
 
-        stage('Checkout') {
-            steps {
-                git 'https://github.com/bavishasundaram29-lang/jenkins-pipeline-demo.git'
-            }
-        }
-
         stage('Run JMeter Test') {
             steps {
                 bat """
