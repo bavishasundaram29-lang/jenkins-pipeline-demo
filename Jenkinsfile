@@ -2,15 +2,24 @@ pipeline {
     agent any
 
     stages {
-        stage('Build') {
+
+        stage('Checkout') {
             steps {
-                echo 'Building project...'
+                git 'https://github.com/bavishasundaram29-lang/jenkins-pipeline-demo.git'
             }
         }
 
-        stage('Test') {
+        stage('Run JMeter Test') {
             steps {
-                echo 'Running tests...'
+                bat """
+                jmeter -n -t test.jmx -l results.jtl -e -o report
+                """
+            }
+        }
+
+        stage('Archive Report') {
+            steps {
+                archiveArtifacts artifacts: 'report/**', fingerprint: true
             }
         }
     }
