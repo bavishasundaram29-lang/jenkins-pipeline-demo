@@ -1,14 +1,41 @@
 pipeline {
     agent any
 
+    environment {
+        JMX_FILE = "SCR01_Jpetstore.jmx"
+        RESULTS = "results.jtl"
+        REPORT_DIR = "report"
+        LOG_FILE = "jmeter.log"
+    }
+
     stages {
+
+        stage('Checkout Code') {
+            steps {
+                echo "Cloning GitHub repository..."
+                git url: "https://github.com/bavishasundaram29-lang/jenkins-pipeline-demo.git", branch: "main"
+            }
+        }
+
+        stage('Verify Files') {
+            steps {
+                bat """
+                echo ===== Workspace Files =====
+                dir
+                """
+            }
+        }
 
         stage('Clean Workspace') {
             steps {
                 bat """
-                if exist report rmdir /s /q report
-                if exist results.jtl del /f /q results.jtl
-                if exist jmeter.log del /f /q jmeter.log
+                echo Cleaning old reports...
+
+                if exist %REPORT_DIR% rmdir /s /q %REPORT_DIR%
+                if exist %RESULTS% del /f /q %RESULTS%
+                if exist %LOG_FILE% del /f /q %LOG_FILE%
+
+                echo Cleanup completed
                 """
             }
         }
@@ -16,27 +43,57 @@ pipeline {
         stage('Run JMeter Test') {
             steps {
                 bat """
-                jmeter -n -t test.jmx ^
-                -l results.jtl ^
-                -j jmeter.log ^
-                -e -o report
+                echo Running JMeter test using %JMX_FILE%...
+
+                jmeter -n -t %JMX_FILE% ^
+                -l %RESULTS% ^
+                -j %LOG_FILE% ^
+                -e -o %REPORT_DIR%
+
+                echo JMeter execution completed
                 """
             }
         }
 
-        stage('Archive') {
+        stage('Verify Output') {
             steps {
-                archiveArtifacts '**/*'
+                bat """
+                echo ===== LOG FILE =====
+                type %LOG_FILE%
+
+                echo ===== RESULTS SAMPLE =====
+                type %RESULTS%
+                """
+            }
+        }
+
+        stage('Archive Reports') {
+            steps {
+                archiveArtifacts artifacts: '**/*.jtl, **/report/**, **/*.log', fingerprint: true
             }
         }
     }
 
     post {
+
         always {
-            emailext(
+            echo "Sending email notification..."
+
+            emailext (
                 to: "bavishasundaram29@gmail.com",
-                subject: "JMeter Build ${BUILD_NUMBER}",
-                body: "Execution completed. Check attached report.",
+                subject: "JMeter Report - Build ${BUILD_NUMBER}",
+                body: """
+                Hi,
+
+                JMeter execution completed.
+
+                Build Number: ${BUILD_NUMBER}
+                Status: ${currentBuild.currentResult}
+
+                Please check attached reports.
+
+                Thanks
+                """,
                 attachmentsPattern: "results.jtl, jmeter.log, report/index.html"
             )
         }
