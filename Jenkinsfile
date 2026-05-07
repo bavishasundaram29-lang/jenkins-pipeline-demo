@@ -42,24 +42,12 @@ pipeline {
             }
         }
 
-        stage('Force Clean Report Folder') {
-            steps {
-                bat """
-                echo Ensuring clean report folder...
-
-                if exist %REPORT_DIR% (
-                    rmdir /s /q %REPORT_DIR%
-                )
-
-                mkdir %REPORT_DIR%
-                """
-            }
-        }
-
         stage('Generate HTML Report') {
             steps {
                 bat """
                 echo Generating HTML Report...
+
+                if exist %REPORT_DIR% rmdir /s /q %REPORT_DIR%
 
                 jmeter -g %RESULTS_FILE% -o %REPORT_DIR%
 
@@ -82,10 +70,52 @@ pipeline {
             }
         }
 
-        stage('Archive') {
+        stage('Archive Artifacts') {
             steps {
                 archiveArtifacts artifacts: 'results.jtl, jmeter.log, report/**'
             }
+        }
+    }
+
+    post {
+
+        success {
+            emailext(
+                to: "bavisahsundar@gmail.com",
+                subject: "JMeter Report - SUCCESS Build #${BUILD_NUMBER}",
+                body: """
+Hi,
+
+Your JMeter Test Execution is SUCCESS.
+
+Build Number: ${BUILD_NUMBER}
+
+Report is attached from Jenkins workspace:
+${BUILD_URL}artifact/report/index.html
+
+Thanks,
+Jenkins
+""",
+                attachmentsPattern: "report/**"
+            )
+        }
+
+        failure {
+            emailext(
+                to: "bavisahsundar@gmail.com",
+                subject: "JMeter Report - FAILED Build #${BUILD_NUMBER}",
+                body: """
+Hi,
+
+Your JMeter Test Execution FAILED.
+
+Check Jenkins logs:
+${BUILD_URL}
+
+Thanks,
+Jenkins
+"""
+            )
         }
     }
 }
