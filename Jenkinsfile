@@ -37,7 +37,7 @@ pipeline {
             }
         }
 
-        stage('Publish HTML Report (Jenkins UI)') {
+        stage('Publish HTML Report') {
             steps {
                 publishHTML([
                     allowMissing: false,
@@ -50,7 +50,7 @@ pipeline {
             }
         }
 
-        stage('Zip Report') {
+        stage('Create ZIP Report') {
             steps {
                 powershell '''
                 Compress-Archive -Path report -DestinationPath report.zip -Force
@@ -66,22 +66,35 @@ pipeline {
     }
 
     post {
-
         always {
+
             emailext(
                 to: "${EMAIL_TO}",
                 subject: "JMeter Report - Build #${BUILD_NUMBER} - ${currentBuild.currentResult}",
+                mimeType: 'text/html',
+
                 body: """
-Build Status: ${currentBuild.currentResult}
+                <h2>JMeter Execution Completed</h2>
 
-View Jenkins Build:
-${BUILD_URL}
+                <p><b>Build Status:</b> ${currentBuild.currentResult}</p>
 
-HTML Report is generated and attached as ZIP.
+                <p>
+                JMeter HTML report has been generated successfully.
+                </p>
 
-Open Jenkins and click "JMeter HTML Report" to view dashboard.
+                <p>
+                ZIP report is attached with this mail.
+                </p>
+
+                <p>
+                Build URL:
+                <a href="${BUILD_URL}">
+                Open Jenkins Build
+                </a>
+                </p>
                 """,
-                attachmentsPattern: "report.zip",
+
+                attachmentsPattern: "**/report.zip",
                 attachLog: true
             )
         }
