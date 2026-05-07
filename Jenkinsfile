@@ -3,29 +3,18 @@ pipeline {
 
     stages {
 
-        stage('Clean Workspace') {
-            steps {
-                cleanWs()
-            }
-        }
-
-        stage('Checkout Code') {
-            steps {
-                git branch: 'main',
-                    url: 'https://github.com/bavishasundaram29-lang/jenkins-pipeline-demo.git'
-            }
-        }
-
         stage('Run JMeter Test') {
             steps {
                 bat '''
-                echo Cleaning old report folder...
+                echo Checking workspace files...
+                dir
 
                 IF EXIST report rmdir /S /Q report
                 IF EXIST results.jtl del /Q results.jtl
 
                 echo Running JMeter test...
-                jmeter -n -t test.jmx -l results.jtl -e -o report
+
+                jmeter -n -t SCR01_Jpetstore.jmx -l results.jtl -e -o report
                 '''
             }
         }
@@ -33,16 +22,20 @@ pipeline {
 
     post {
         always {
-            echo 'Publishing HTML Report to Jenkins UI...'
-
-            publishHTML([
-                allowMissing: false,
-                alwaysLinkToLastBuild: true,
-                keepAll: true,
-                reportDir: 'report',
-                reportFiles: 'index.html',
-                reportName: 'JMeter HTML Report'
-            ])
+            script {
+                if (fileExists('report/index.html')) {
+                    publishHTML([
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'report',
+                        reportFiles: 'index.html',
+                        reportName: 'JMeter HTML Report'
+                    ])
+                } else {
+                    echo "Report not generated, skipping HTML publish"
+                }
+            }
         }
     }
 }
