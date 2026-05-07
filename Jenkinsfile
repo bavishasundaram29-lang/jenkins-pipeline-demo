@@ -2,56 +2,52 @@ pipeline {
     agent any
 
     environment {
-        JMETER_HOME = "C:\\apache-jmeter-5.6.3\\apache-jmeter-5.6.3"
-        TEST_PLAN = "jpetstore_jenkins\\SCR01_Jpetstore.jmx"
-        RESULTS_FILE = "results.jtl"
+        JMETER_HOME = "C:\\apache-jmeter-5.6.3"   // change if needed
+        TEST_PLAN = "test.jmx"
+        RESULTS = "results.jtl"
         REPORT_DIR = "report"
+        LOG_FILE = "jmeter.log"
     }
 
     stages {
 
-        stage('Checkout') {
+        stage('Checkout Code') {
             steps {
-                echo "Using SCM checkout (already done by Jenkins)"
-            }
-        }
-
-        stage('Clean Workspace') {
-            steps {
-                echo "Cleaning old results and report..."
-
-                bat '''
-                    if exist results.jtl del /f /q results.jtl
-                    if exist report rmdir /s /q report
-                    mkdir report
-                '''
+                git 'https://github.com/your-repo/your-project.git'
             }
         }
 
         stage('Run JMeter Test') {
             steps {
-                echo "Executing JMeter test..."
-
                 bat """
-                    ${JMETER_HOME}\\bin\\jmeter.bat -n ^
-                    -t ${TEST_PLAN} ^
-                    -l ${RESULTS_FILE} ^
-                    -e -o ${REPORT_DIR}
+                echo Running JMeter Test...
+
+                %JMETER_HOME%\\bin\\jmeter.bat -n ^
+                -t %TEST_PLAN% ^
+                -l %RESULTS% ^
+                -j %LOG_FILE% ^
+                -e -o %REPORT_DIR%
+
+                echo Test Execution Completed
                 """
             }
         }
 
-        stage('Verify Report Generation') {
+        stage('Verify Outputs') {
             steps {
-                echo "Verifying output files..."
+                bat """
+                echo ===== LOG FILE =====
+                type %LOG_FILE%
 
-                bat '''
-                    echo Checking JTL file...
-                    dir results.jtl
+                echo ===== SAMPLE JTL =====
+                type %RESULTS%
+                """
+            }
+        }
 
-                    echo Checking HTML report folder...
-                    dir report
-                '''
+        stage('Archive Reports') {
+            steps {
+                archiveArtifacts artifacts: '**/*.jtl, **/report/**, **/*.log', fingerprint: true
             }
         }
     }
@@ -59,38 +55,24 @@ pipeline {
     post {
 
         always {
-            echo "Archiving test results..."
-
-            archiveArtifacts artifacts: 'results.jtl, report/**', fingerprint: true
-        }
-
-        success {
-            echo "Build SUCCESS - Sending email with report"
+            echo "Sending Email with Report..."
 
             emailext (
-                to: "your_email@gmail.com",
-                subject: "✅ JMeter Report Success - Build #${BUILD_NUMBER}",
+                subject: "JMeter Test Report - Build ${BUILD_NUMBER}",
                 body: """
-                    <h2>JMeter Performance Test Completed Successfully</h2>
-                    <p><b>Build Number:</b> ${BUILD_NUMBER}</p>
-                    <p><b>Status:</b> SUCCESS</p>
-                    <p>Attached is the HTML report.</p>
+                    Hi Team,
+
+                    JMeter execution completed.
+
+                    Build Number: ${BUILD_NUMBER}
+                    Status: ${currentBuild.currentResult}
+
+                    Please find the attached report/logs.
+
+                    Thanks
                 """,
-                attachmentsPattern: "report/**"
-            )
-        }
-
-        failure {
-            echo "Build FAILED - Sending failure email"
-
-            emailext (
-                to: "your_email@gmail.com",
-                subject: "❌ JMeter Build Failed - #${BUILD_NUMBER}",
-                body: """
-                    <h2>JMeter Test Failed</h2>
-                    <p><b>Build Number:</b> ${BUILD_NUMBER}</p>
-                    <p>Please check Jenkins console logs.</p>
-                """
+                to: "yourmail@gmail.com",
+                attachmentsPattern: "results.jtl, jmeter.log, report/index.html"
             )
         }
     }
