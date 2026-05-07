@@ -6,7 +6,7 @@ pipeline {
         stage('Run JMeter Test') {
             steps {
                 bat '''
-                echo Checking workspace files...
+                echo Workspace files:
                 dir
 
                 IF EXIST report rmdir /S /Q report
@@ -14,7 +14,7 @@ pipeline {
 
                 echo Running JMeter test...
 
-                jmeter -n -t SCR01_Jpetstore.jmx -l results.jtl -e -o report
+                jmeter -n -t jpetstore_jenkins/SCR01_Jpetstore.jmx -l results.jtl -e -o report
                 '''
             }
         }
@@ -33,7 +33,7 @@ pipeline {
                         reportName: 'JMeter HTML Report'
                     ])
                 } else {
-                    echo "Report not generated, skipping HTML publish"
+                    echo "Report not generated"
                 }
             }
         }
