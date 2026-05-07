@@ -58,43 +58,70 @@ pipeline {
             }
         }
 
-        stage('Verify ZIP') {
+        stage('Verify ZIP File') {
             steps {
-                bat 'dir report.zip'
+                bat '''
+                echo Checking ZIP File...
+                dir
+                dir report.zip
+                '''
             }
         }
     }
 
     post {
-        always {
+
+        success {
 
             emailext(
                 to: "${EMAIL_TO}",
-                subject: "JMeter Report - Build #${BUILD_NUMBER} - ${currentBuild.currentResult}",
+
+                subject: "JMeter Report - Build #${BUILD_NUMBER} - SUCCESS",
+
                 mimeType: 'text/html',
 
                 body: """
-                <h2>JMeter Execution Completed</h2>
+                <h2>JMeter Test Execution Completed Successfully</h2>
+
+                <p><b>Build Number:</b> ${BUILD_NUMBER}</p>
 
                 <p><b>Build Status:</b> ${currentBuild.currentResult}</p>
 
                 <p>
-                JMeter HTML report has been generated successfully.
+                JMeter HTML Report has been generated successfully.
                 </p>
 
                 <p>
-                ZIP report is attached with this mail.
+                ZIP Report is attached with this email.
                 </p>
 
                 <p>
-                Build URL:
                 <a href="${BUILD_URL}">
                 Open Jenkins Build
                 </a>
                 </p>
                 """,
 
-                attachmentsPattern: "**/report.zip",
+                attachmentsPattern: '**/report.zip',
+
+                attachLog: true
+            )
+        }
+
+        failure {
+
+            emailext(
+                to: "${EMAIL_TO}",
+
+                subject: "JMeter Report - Build #${BUILD_NUMBER} - FAILED",
+
+                body: """
+                JMeter Pipeline Failed.
+
+                Check Jenkins Console Output:
+                ${BUILD_URL}
+                """,
+
                 attachLog: true
             )
         }
