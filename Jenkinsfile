@@ -3,21 +3,27 @@ pipeline {
 
     stages {
 
-        stage('Build') {
+        stage('Checkout') {
             steps {
-                echo "Running build..."
+                git url: 'https://github.com/bavishasundaram29-lang/jenkins-pipeline-demo.git'
             }
         }
 
-        stage('Run Tests / Build') {
+        stage('Run JMeter Test') {
             steps {
-                echo "Running tests or JMeter..."
+                bat '''
+                jmeter -n ^
+                -t test.jmx ^
+                -l result.jtl ^
+                -e ^
+                -o report
+                '''
             }
         }
 
-        stage('Generate Report Check') {
+        stage('Verify Report') {
             steps {
-                bat 'dir'
+                bat 'dir report'
             }
         }
     }
@@ -26,15 +32,17 @@ pipeline {
         always {
             emailext(
                 to: "bavishasundar@gmail.com",
-                subject: "Jenkins Build - ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                subject: "Jenkins Report - ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                 body: """
 Build Completed
 
 Job: ${env.JOB_NAME}
-Build Number: ${env.BUILD_NUMBER}
+Build: ${env.BUILD_NUMBER}
 Status: ${currentBuild.currentResult}
+
+Report generated in workspace/report
 """,
-                attachmentsPattern: "**/*.html, **/*.jtl, **/index.html"
+                attachmentsPattern: "report/index.html, result.jtl"
             )
         }
     }
