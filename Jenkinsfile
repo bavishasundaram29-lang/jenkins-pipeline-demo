@@ -6,7 +6,7 @@ pipeline {
         stage('Run JMeter Test') {
             steps {
                 bat '''
-                echo Workspace before run:
+                echo Workspace:
                 dir
 
                 IF EXIST report rmdir /S /Q report
@@ -20,7 +20,7 @@ pipeline {
 
                 jmeter -g results.jtl -o report
 
-                echo Checking report folder...
+                echo Report generated:
                 dir report
                 '''
             }
@@ -29,20 +29,14 @@ pipeline {
 
     post {
         always {
-            script {
-                if (fileExists('report/index.html')) {
-                    publishHTML([
-                        allowMissing: false,
-                        alwaysLinkToLastBuild: true,
-                        keepAll: true,
-                        reportDir: 'report',
-                        reportFiles: 'index.html',
-                        reportName: 'JMeter HTML Report'
-                    ])
-                } else {
-                    echo "❌ Report NOT generated"
-                }
-            }
+            publishHTML([
+                allowMissing: false,
+                alwaysLinkToLastBuild: true,
+                keepAll: true,
+                reportDir: 'report',
+                reportFiles: 'index.html',
+                reportName: 'JMeter HTML Report'
+            ])
         }
     }
 }
