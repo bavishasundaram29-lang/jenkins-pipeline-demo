@@ -3,10 +3,9 @@ pipeline {
 
     stages {
 
-        stage('Checkout Code') {
+        stage('Checkout') {
             steps {
                 checkout scm
-                echo "Code checkout completed"
             }
         }
 
@@ -26,7 +25,6 @@ pipeline {
                 -n ^
                 -t jpetstore_jenkins\\SCR01_Jpetstore.jmx ^
                 -l results.jtl ^
-                -Jjmeter.save.saveservice.output_format=csv ^
                 -e ^
                 -o report
                 """
@@ -40,24 +38,63 @@ pipeline {
                     reportFiles: 'index.html',
                     reportName: 'JMeter Report',
                     keepAll: true,
-                    alwaysLinkToLastBuild: true,
-                    allowMissing: false
+                    alwaysLinkToLastBuild: true
                 ])
             }
         }
     }
 
     post {
+
         success {
-            echo "JMeter report published successfully in Jenkins UI"
+
+            emailext(
+                subject: "JMeter Test Report - SUCCESS - Build #${BUILD_NUMBER}",
+
+                body: """
+                <h2>JMeter Test Execution Successful</h2>
+
+                <p><b>Job Name:</b> ${JOB_NAME}</p>
+                <p><b>Build Number:</b> ${BUILD_NUMBER}</p>
+
+                <p>
+                Open Report:
+                <a href="${BUILD_URL}JMeter_Report/">
+                Click Here
+                </a>
+                </p>
+
+                <p>Regards,<br>Jenkins</p>
+                """,
+
+                mimeType: 'text/html',
+
+                to: 'yourmail@gmail.com'
+            )
         }
 
         failure {
-            echo "Build failed. Check logs."
-        }
 
-        always {
-            archiveArtifacts artifacts: 'results.jtl', fingerprint: true
+            emailext(
+                subject: "JMeter Test FAILED - Build #${BUILD_NUMBER}",
+
+                body: """
+                <h2>Build Failed</h2>
+
+                <p>Check Jenkins console output.</p>
+
+                <p>
+                Build URL:
+                <a href="${BUILD_URL}">
+                Open Build
+                </a>
+                </p>
+                """,
+
+                mimeType: 'text/html',
+
+                to: 'yourmail@gmail.com'
+            )
         }
     }
 }
