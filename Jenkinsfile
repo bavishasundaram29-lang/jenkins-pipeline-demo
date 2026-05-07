@@ -29,26 +29,36 @@ pipeline {
         stage('Run JMeter Test') {
             steps {
                 bat """
-                echo Running JMeter Test...
+                echo Running JMeter test...
 
                 jmeter -n -t %JMX_FILE% ^
                 -l %RESULTS% ^
                 -j %LOG_FILE%
 
-                jmeter -g %RESULTS% -o %REPORT_DIR%
-
-                echo Test Completed
+                echo Test execution completed
                 """
             }
         }
 
-        stage('Verify Output') {
+        stage('Generate HTML Report') {
             steps {
                 bat """
-                echo ===== RESULTS =====
-                type %RESULTS%
+                echo Generating HTML report...
 
-                echo ===== REPORT CHECK =====
+                if exist %RESULTS% (
+                    jmeter -g %RESULTS% -o %REPORT_DIR%
+                ) else (
+                    echo ERROR: results.jtl not found
+                    exit /b 1
+                )
+                """
+            }
+        }
+
+        stage('Verify Report') {
+            steps {
+                bat """
+                echo ===== CHECK REPORT =====
                 dir %REPORT_DIR%
                 """
             }
@@ -62,22 +72,26 @@ pipeline {
     }
 
     post {
+
         always {
+            echo "Sending report email..."
+
             emailext (
                 to: "bavishasundaram29@gmail.com",
-                subject: "JMeter Report - Build ${BUILD_NUMBER}",
+                subject: "JMeter Test Report - Build ${BUILD_NUMBER}",
                 body: """
                 Hi,
 
-                Your JMeter test execution is completed.
+                Your JMeter test has completed.
 
                 Build Number: ${BUILD_NUMBER}
                 Status: ${currentBuild.currentResult}
 
-                Please check Jenkins artifacts for report.
+                The HTML report is attached.
 
                 Thanks
-                """
+                """,
+                attachmentsPattern: "results.jtl, jmeter.log, report/index.html"
             )
         }
     }
