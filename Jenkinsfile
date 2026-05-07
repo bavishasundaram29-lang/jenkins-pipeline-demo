@@ -2,8 +2,6 @@ pipeline {
     agent any
 
     environment {
-        REPORT_DIR = "report"
-        ZIP_FILE = "report.zip"
         EMAIL_TO = "bavishasundaram29@gmail.com"
     }
 
@@ -20,7 +18,6 @@ pipeline {
             steps {
                 bat '''
                     if exist report rmdir /s /q report
-                    if exist report.zip del /f /q report.zip
                     if exist results.jtl del /f /q results.jtl
                 '''
             }
@@ -50,20 +47,11 @@ pipeline {
             }
         }
 
-        stage('Create ZIP Report') {
-            steps {
-                powershell '''
-                Compress-Archive -Path report -DestinationPath report.zip -Force
-                '''
-            }
-        }
-
-        stage('Verify ZIP File') {
+        stage('Verify Report') {
             steps {
                 bat '''
-                echo Checking ZIP File...
-                dir
-                dir report.zip
+                echo Report Files:
+                dir report
                 '''
             }
         }
@@ -85,24 +73,21 @@ pipeline {
 
                 <p><b>Build Number:</b> ${BUILD_NUMBER}</p>
 
-                <p><b>Build Status:</b> ${currentBuild.currentResult}</p>
+                <p><b>Status:</b> ${currentBuild.currentResult}</p>
 
                 <p>
-                JMeter HTML Report has been generated successfully.
+                HTML report files are attached.
                 </p>
 
                 <p>
-                ZIP Report is attached with this email.
-                </p>
-
-                <p>
-                <a href="${BUILD_URL}">
-                Open Jenkins Build
+                Jenkins Report Link:
+                <a href="${BUILD_URL}JMeter_20HTML_20Report/">
+                Open Report
                 </a>
                 </p>
                 """,
 
-                attachmentsPattern: '**/report.zip',
+                attachmentsPattern: 'report/index.html, report/content/**/*',
 
                 attachLog: true
             )
@@ -113,12 +98,12 @@ pipeline {
             emailext(
                 to: "${EMAIL_TO}",
 
-                subject: "JMeter Report - Build #${BUILD_NUMBER} - FAILED",
+                subject: "JMeter Build Failed - ${BUILD_NUMBER}",
 
                 body: """
-                JMeter Pipeline Failed.
+                Build Failed.
 
-                Check Jenkins Console Output:
+                Check Jenkins:
                 ${BUILD_URL}
                 """,
 
