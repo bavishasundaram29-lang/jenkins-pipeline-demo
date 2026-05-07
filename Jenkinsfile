@@ -25,7 +25,7 @@ pipeline {
                 if exist %RESULTS% del /f /q %RESULTS%
                 if exist %LOG_FILE% del /f /q %LOG_FILE%
 
-                echo Cleanup done
+                echo Cleanup completed
                 """
             }
         }
@@ -39,7 +39,7 @@ pipeline {
                 -l %RESULTS% ^
                 -j %LOG_FILE%
 
-                echo Test execution completed
+                echo JMeter execution completed
                 """
             }
         }
@@ -49,14 +49,14 @@ pipeline {
                 bat """
                 echo Generating HTML Report...
 
-                if exist %RESULTS% (
-                    jmeter -g %RESULTS% -o %REPORT_DIR%
-                ) else (
+                if not exist %RESULTS% (
                     echo ERROR: results.jtl not found
                     exit /b 1
                 )
 
-                echo Report generated
+                jmeter -g %RESULTS% -o %REPORT_DIR%
+
+                echo ===== REPORT GENERATED =====
                 dir %REPORT_DIR%
                 """
             }
@@ -80,12 +80,12 @@ pipeline {
                 body: """
                 Hi,
 
-                Your JMeter test has completed.
+                Your JMeter test execution is completed.
 
                 ✔ Build Number: ${BUILD_NUMBER}
                 ✔ Status: ${currentBuild.currentResult}
 
-                👉 Download report from Jenkins:
+                👉 Download Report:
                 ${BUILD_URL}artifact/report/index.html
 
                 Thanks
