@@ -64,30 +64,17 @@ pipeline {
             emailext(
                 to: "${EMAIL_TO}",
 
-                subject: "JMeter Report - Build #${BUILD_NUMBER} - SUCCESS",
-
-                mimeType: 'text/html',
+                subject: "JMeter Build Success - ${BUILD_NUMBER}",
 
                 body: """
-                <h2>JMeter Test Execution Completed Successfully</h2>
+Build completed successfully.
 
-                <p><b>Build Number:</b> ${BUILD_NUMBER}</p>
+JMeter HTML Report:
+${BUILD_URL}JMeter_20HTML_20Report/
 
-                <p><b>Status:</b> ${currentBuild.currentResult}</p>
-
-                <p>
-                HTML report files are attached.
-                </p>
-
-                <p>
-                Jenkins Report Link:
-                <a href="${BUILD_URL}JMeter_20HTML_20Report/">
-                Open Report
-                </a>
-                </p>
+Build URL:
+${BUILD_URL}
                 """,
-
-                attachmentsPattern: 'report/index.html, report/content/**/*',
 
                 attachLog: true
             )
@@ -101,10 +88,10 @@ pipeline {
                 subject: "JMeter Build Failed - ${BUILD_NUMBER}",
 
                 body: """
-                Build Failed.
+Build failed.
 
-                Check Jenkins:
-                ${BUILD_URL}
+Check Jenkins:
+${BUILD_URL}
                 """,
 
                 attachLog: true
