@@ -25,7 +25,7 @@ pipeline {
                 if exist %RESULTS% del /f /q %RESULTS%
                 if exist %LOG_FILE% del /f /q %LOG_FILE%
 
-                echo Cleanup completed
+                echo Cleanup done
                 """
             }
         }
@@ -39,7 +39,7 @@ pipeline {
                 -l %RESULTS% ^
                 -j %LOG_FILE%
 
-                echo JMeter execution completed
+                echo Test Completed
                 """
             }
         }
@@ -64,33 +64,8 @@ pipeline {
 
         stage('Archive Reports') {
             steps {
-                archiveArtifacts artifacts: '**/*.jtl, **/report/**, **/*.log', fingerprint: true
+                archiveArtifacts artifacts: '**/report/**, **/*.jtl, **/*.log', fingerprint: true
             }
-        }
-    }
-
-    post {
-
-        always {
-            echo "Sending email notification..."
-
-            emailext (
-                to: "bavishasundaram29@gmail.com",
-                subject: "JMeter Report - Build ${BUILD_NUMBER}",
-                body: """
-                Hi,
-
-                Your JMeter test execution is completed.
-
-                ✔ Build Number: ${BUILD_NUMBER}
-                ✔ Status: ${currentBuild.currentResult}
-
-                👉 Download Report:
-                ${BUILD_URL}artifact/report/index.html
-
-                Thanks
-                """
-            )
         }
     }
 }
