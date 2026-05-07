@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        JMETER_PATH = "C:\\apache-jmeter-5.6.3\\apache-jmeter-5.6.3\\bin\\jmeter.bat"
+        JMETER_HOME = "C:\\apache-jmeter-5.6.3\\apache-jmeter-5.6.3"
         EMAIL_TO = "bavishasundaram29@gmail.com"
     }
 
@@ -26,12 +26,10 @@ pipeline {
         stage('Run JMeter Test') {
             steps {
                 bat """
-                "%JMETER_PATH%" ^
-                -n ^
+                \"${JMETER_HOME}\\bin\\jmeter.bat\" -n ^
                 -t jpetstore_jenkins\\SCR01_Jpetstore.jmx ^
                 -l results.jtl ^
-                -e ^
-                -o report
+                -e -o report
                 """
             }
         }
@@ -44,10 +42,10 @@ pipeline {
 
         stage('Publish Report') {
             steps {
-                publishHTML(target: [
+                publishHTML([
                     reportDir: 'report',
                     reportFiles: 'index.html',
-                    reportName: 'JMeter Report',
+                    reportName: 'JMeter_Report',
                     keepAll: true,
                     alwaysLinkToLastBuild: true,
                     allowMissing: false
@@ -61,16 +59,19 @@ pipeline {
         success {
             emailext(
                 to: "${EMAIL_TO}",
-                subject: "✅ SUCCESS - JMeter Build #${BUILD_NUMBER}",
+                subject: "$PROJECT_NAME - Build # $BUILD_NUMBER - SUCCESS",
                 body: """
-                <h2>JMeter Test Passed</h2>
+                <h2>JMeter Test Execution Successful</h2>
 
-                <p><b>Job:</b> ${JOB_NAME}</p>
-                <p><b>Build:</b> ${BUILD_NUMBER}</p>
+                <p><b>Project:</b> $PROJECT_NAME</p>
+                <p><b>Build Number:</b> $BUILD_NUMBER</p>
+                <p><b>Status:</b> SUCCESS</p>
 
-                <p>
-                📊 <a href="${BUILD_URL}JMeter_Report/">Open Report</a>
-                </p>
+                <p>View Console Output:<br>
+                <a href="$BUILD_URL/console">$BUILD_URL/console</a></p>
+
+                <p>View JMeter Report:<br>
+                <a href="$BUILD_URL/JMeter_Report">$BUILD_URL/JMeter_Report</a></p>
                 """,
                 mimeType: 'text/html'
             )
@@ -79,13 +80,16 @@ pipeline {
         failure {
             emailext(
                 to: "${EMAIL_TO}",
-                subject: "❌ FAILED - JMeter Build #${BUILD_NUMBER}",
+                subject: "$PROJECT_NAME - Build # $BUILD_NUMBER - FAILED",
                 body: """
-                <h2>JMeter Test Failed</h2>
+                <h2 style="color:red;">JMeter Test Failed</h2>
 
-                <p>Check console logs</p>
+                <p><b>Project:</b> $PROJECT_NAME</p>
+                <p><b>Build Number:</b> $BUILD_NUMBER</p>
+                <p><b>Status:</b> FAILED</p>
 
-                <p><a href="${BUILD_URL}console">Open Logs</a></p>
+                <p>Check logs:<br>
+                <a href="$BUILD_URL/console">$BUILD_URL/console</a></p>
                 """,
                 mimeType: 'text/html'
             )
