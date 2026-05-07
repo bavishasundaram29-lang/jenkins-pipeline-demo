@@ -61,7 +61,7 @@ pipeline {
     post {
         always {
 
-            emailext(
+            mail(
                 subject: "JMeter Test Report - Build #${BUILD_NUMBER}",
                 body: """
                 Build Completed Successfully.
