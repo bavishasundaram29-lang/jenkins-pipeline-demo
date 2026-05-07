@@ -10,17 +10,16 @@ pipeline {
 
     stages {
 
-        stage('Checkout Code') {
+        stage('Checkout') {
             steps {
-                echo "Cloning repository..."
-                git branch: 'main',
-                    url: 'https://github.com/YOUR_REPO_URL.git'
+                echo "Code already checked out by Jenkins SCM"
             }
         }
 
         stage('Run JMeter Test') {
             steps {
-                echo "Executing JMeter Test..."
+                echo "Running JMeter performance test..."
+
                 bat """
                 ${JMETER_HOME}\\bin\\jmeter.bat -n ^
                 -t ${TEST_PLAN} ^
@@ -32,8 +31,14 @@ pipeline {
 
         stage('Verify Report') {
             steps {
-                echo "Checking report generation..."
-                bat "if not exist ${REPORT_DIR}\\index.html exit 1"
+                echo "Verifying HTML report..."
+
+                bat """
+                if not exist ${REPORT_DIR}\\index.html (
+                    echo Report not generated
+                    exit 1
+                )
+                """
             }
         }
     }
@@ -41,19 +46,20 @@ pipeline {
     post {
 
         success {
-            echo "Build Successful - Sending Email with Report"
+            echo "Build Successful - Sending Email"
 
             emailext (
-                subject: "✔ JMeter Test Completed - Build #${env.BUILD_NUMBER}",
+                subject: "✔ JMeter Report Generated - Build #${env.BUILD_NUMBER}",
                 body: """
                 Hi Team,
 
-                JMeter performance test has completed successfully.
+                JMeter test executed successfully.
 
                 📌 Build Number: ${env.BUILD_NUMBER}
-                📊 Report Location: ${env.WORKSPACE}\\${REPORT_DIR}\\index.html
+                📂 Workspace: ${env.WORKSPACE}
+                📊 Report Path: ${env.WORKSPACE}\\${REPORT_DIR}\\index.html
 
-                Please find attached HTML report.
+                Please find attached full HTML report.
 
                 Regards,
                 Jenkins Pipeline
@@ -64,7 +70,7 @@ pipeline {
         }
 
         failure {
-            echo "Build Failed - Sending Failure Email"
+            echo "Build Failed - Sending Email"
 
             emailext (
                 subject: "❌ JMeter Test Failed - Build #${env.BUILD_NUMBER}",
@@ -73,7 +79,7 @@ pipeline {
 
                 JMeter test execution failed.
 
-                Please check Jenkins logs.
+                Please check Jenkins logs for details.
 
                 Regards,
                 Jenkins Pipeline
@@ -82,7 +88,7 @@ pipeline {
         }
 
         always {
-            echo "Pipeline Execution Completed"
+            echo "Pipeline execution completed"
         }
     }
 }
