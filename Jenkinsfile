@@ -19,9 +19,13 @@ pipeline {
         stage('Clean Workspace') {
             steps {
                 bat """
+                echo Cleaning workspace...
+
                 if exist %REPORT_DIR% rmdir /s /q %REPORT_DIR%
                 if exist %RESULTS% del /f /q %RESULTS%
                 if exist %LOG_FILE% del /f /q %LOG_FILE%
+
+                echo Cleanup done
                 """
             }
         }
@@ -29,15 +33,31 @@ pipeline {
         stage('Run JMeter Test') {
             steps {
                 bat """
-                echo Running JMeter test...
+                echo Running JMeter Test...
 
                 jmeter -n -t %JMX_FILE% ^
                 -l %RESULTS% ^
                 -j %LOG_FILE%
 
-                jmeter -g %RESULTS% -o %REPORT_DIR%
+                echo Test execution completed
+                """
+            }
+        }
 
-                echo Test Completed
+        stage('Generate HTML Report') {
+            steps {
+                bat """
+                echo Generating HTML Report...
+
+                if exist %RESULTS% (
+                    jmeter -g %RESULTS% -o %REPORT_DIR%
+                ) else (
+                    echo ERROR: results.jtl not found
+                    exit /b 1
+                )
+
+                echo Report generated
+                dir %REPORT_DIR%
                 """
             }
         }
@@ -47,36 +67,26 @@ pipeline {
                 archiveArtifacts artifacts: '**/*.jtl, **/report/**, **/*.log', fingerprint: true
             }
         }
-
-        stage('Publish HTML Report') {
-            steps {
-                publishHTML([
-                    reportDir: 'report',
-                    reportFiles: 'index.html',
-                    reportName: 'JMeter HTML Report',
-                    keepAll: true,
-                    alwaysLinkToLastBuild: true
-                ])
-            }
-        }
     }
 
     post {
 
         always {
+            echo "Sending email notification..."
+
             emailext (
                 to: "bavishasundaram29@gmail.com",
                 subject: "JMeter Report - Build ${BUILD_NUMBER}",
                 body: """
                 Hi,
 
-                Your JMeter test execution is completed successfully.
+                Your JMeter test has completed.
 
-                Build Number: ${BUILD_NUMBER}
-                Status: ${currentBuild.currentResult}
+                ✔ Build Number: ${BUILD_NUMBER}
+                ✔ Status: ${currentBuild.currentResult}
 
-                👉 View Report in Jenkins:
-                ${BUILD_URL}JMeter_HTML_Report/
+                👉 Download report from Jenkins:
+                ${BUILD_URL}artifact/report/index.html
 
                 Thanks
                 """
