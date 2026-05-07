@@ -6,21 +6,17 @@ pipeline {
         stage('Run JMeter Test') {
             steps {
                 bat '''
-                echo Workspace:
-                dir
-
+                echo Cleaning old data...
                 IF EXIST report rmdir /S /Q report
                 IF EXIST results.jtl del /Q results.jtl
 
-                echo Running JMeter test...
-
+                echo Running JMeter Test...
                 jmeter -n -t jpetstore_jenkins/SCR01_Jpetstore.jmx -l results.jtl
 
-                echo Generating HTML report...
-
+                echo Generating HTML Report...
                 jmeter -g results.jtl -o report
 
-                echo Report folder check:
+                echo Checking report folder...
                 dir report
                 '''
             }
@@ -29,20 +25,14 @@ pipeline {
 
     post {
         always {
-            script {
-                if (fileExists('report/index.html')) {
-                    publishHTML([
-                        allowMissing: false,
-                        alwaysLinkToLastBuild: true,
-                        keepAll: true,
-                        reportDir: 'report',
-                        reportFiles: 'index.html',
-                        reportName: 'JMeter HTML Report'
-                    ])
-                } else {
-                    echo "❌ HTML report not generated"
-                }
-            }
+            publishHTML([
+                allowMissing: false,
+                alwaysLinkToLastBuild: true,
+                keepAll: true,
+                reportDir: 'report',
+                reportFiles: 'index.html',
+                reportName: 'JMeter HTML Report'
+            ])
         }
     }
 }
