@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        JMETER_HOME = "C:\\apache-jmeter-5.6.3\\apache-jmeter-5.6.3\\bin"
+        JMETER_PATH = "C:\\apache-jmeter-5.6.3\\apache-jmeter-5.6.3\\bin\\jmeter.bat"
         EMAIL_TO = "bavishasundaram29@gmail.com"
     }
 
@@ -26,13 +26,19 @@ pipeline {
         stage('Run JMeter Test') {
             steps {
                 bat """
-                %JMETER_HOME%\\jmeter.bat ^
+                "%JMETER_PATH%" ^
                 -n ^
                 -t jpetstore_jenkins\\SCR01_Jpetstore.jmx ^
                 -l results.jtl ^
                 -e ^
                 -o report
                 """
+            }
+        }
+
+        stage('Verify Report') {
+            steps {
+                bat 'dir report'
             }
         }
 
@@ -57,16 +63,14 @@ pipeline {
                 to: "${EMAIL_TO}",
                 subject: "✅ SUCCESS - JMeter Build #${BUILD_NUMBER}",
                 body: """
-                <h2 style="color:green;">JMeter Test Passed</h2>
+                <h2>JMeter Test Passed</h2>
 
                 <p><b>Job:</b> ${JOB_NAME}</p>
-                <p><b>Build Number:</b> ${BUILD_NUMBER}</p>
+                <p><b>Build:</b> ${BUILD_NUMBER}</p>
 
                 <p>
-                📊 <a href="${BUILD_URL}JMeter_Report/">Open Jenkins Report</a>
+                📊 <a href="${BUILD_URL}JMeter_Report/">Open Report</a>
                 </p>
-
-                <p>Regards,<br>Jenkins</p>
                 """,
                 mimeType: 'text/html'
             )
@@ -77,14 +81,11 @@ pipeline {
                 to: "${EMAIL_TO}",
                 subject: "❌ FAILED - JMeter Build #${BUILD_NUMBER}",
                 body: """
-                <h2 style="color:red;">JMeter Test Failed</h2>
+                <h2>JMeter Test Failed</h2>
 
-                <p><b>Job:</b> ${JOB_NAME}</p>
-                <p><b>Build Number:</b> ${BUILD_NUMBER}</p>
+                <p>Check console logs</p>
 
-                <p>
-                🔍 <a href="${BUILD_URL}console">View Console Logs</a>
-                </p>
+                <p><a href="${BUILD_URL}console">Open Logs</a></p>
                 """,
                 mimeType: 'text/html'
             )
