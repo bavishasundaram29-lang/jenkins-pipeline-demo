@@ -2,7 +2,6 @@ pipeline {
     agent any
 
     environment {
-        JMETER_HOME = "C:\\apache-jmeter-5.6.3\\apache-jmeter-5.6.3"
         EMAIL_TO = "bavishasundaram29@gmail.com"
     }
 
@@ -10,15 +9,16 @@ pipeline {
 
         stage('Checkout Code') {
             steps {
-                checkout scm
+                git url: 'https://github.com/bavishasundaram29-lang/jenkins-pipeline-demo.git',
+                    branch: 'main'
             }
         }
 
         stage('Clean Old Files') {
             steps {
                 bat '''
-                if exist report rmdir /s /q report
-                if exist results.jtl del /f /q results.jtl
+                    if exist report rmdir /s /q report
+                    if exist results.jtl del /f /q results.jtl
                 '''
             }
         }
@@ -26,7 +26,7 @@ pipeline {
         stage('Run JMeter Test') {
             steps {
                 bat """
-                \"${JMETER_HOME}\\bin\\jmeter.bat\" -n ^
+                "C:\\apache-jmeter-5.6.3\\apache-jmeter-5.6.3\\bin\\jmeter.bat" -n ^
                 -t jpetstore_jenkins\\SCR01_Jpetstore.jmx ^
                 -l results.jtl ^
                 -e -o report
@@ -43,55 +43,30 @@ pipeline {
         stage('Publish Report') {
             steps {
                 publishHTML([
+                    allowMissing: false,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true,
                     reportDir: 'report',
                     reportFiles: 'index.html',
-                    reportName: 'JMeter_Report',
-                    keepAll: true,
-                    alwaysLinkToLastBuild: true,
-                    allowMissing: false
+                    reportName: 'JMeter Report'
                 ])
             }
         }
     }
 
     post {
-
-        success {
+        always {
             emailext(
-                to: "${EMAIL_TO}",
-                subject: "$PROJECT_NAME - Build # $BUILD_NUMBER - SUCCESS",
+                to: env.EMAIL_TO,
+                subject: "${env.JOB_NAME} - Build #${env.BUILD_NUMBER} - ${currentBuild.currentResult}",
                 body: """
-                <h2>JMeter Test Execution Successful</h2>
+Build Status: ${currentBuild.currentResult}
 
-                <p><b>Project:</b> $PROJECT_NAME</p>
-                <p><b>Build Number:</b> $BUILD_NUMBER</p>
-                <p><b>Status:</b> SUCCESS</p>
+Project: ${env.JOB_NAME}
+Build Number: ${env.BUILD_NUMBER}
 
-                <p>View Console Output:<br>
-                <a href="$BUILD_URL/console">$BUILD_URL/console</a></p>
-
-                <p>View JMeter Report:<br>
-                <a href="$BUILD_URL/JMeter_Report">$BUILD_URL/JMeter_Report</a></p>
-                """,
-                mimeType: 'text/html'
-            )
-        }
-
-        failure {
-            emailext(
-                to: "${EMAIL_TO}",
-                subject: "$PROJECT_NAME - Build # $BUILD_NUMBER - FAILED",
-                body: """
-                <h2 style="color:red;">JMeter Test Failed</h2>
-
-                <p><b>Project:</b> $PROJECT_NAME</p>
-                <p><b>Build Number:</b> $BUILD_NUMBER</p>
-                <p><b>Status:</b> FAILED</p>
-
-                <p>Check logs:<br>
-                <a href="$BUILD_URL/console">$BUILD_URL/console</a></p>
-                """,
-                mimeType: 'text/html'
+Check details: ${env.BUILD_URL}
+"""
             )
         }
     }
