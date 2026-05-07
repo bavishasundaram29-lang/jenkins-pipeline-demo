@@ -14,10 +14,11 @@ pipeline {
             }
         }
 
-        stage('Clean Old Files') {
+        stage('Clean Workspace') {
             steps {
                 bat '''
                     if exist report rmdir /s /q report
+                    if exist report.zip del /f /q report.zip
                     if exist results.jtl del /f /q results.jtl
                 '''
             }
@@ -40,16 +41,11 @@ pipeline {
             }
         }
 
-        stage('Publish Report') {
+        stage('Zip Report') {
             steps {
-                publishHTML([
-                    allowMissing: false,
-                    alwaysLinkToLastBuild: true,
-                    keepAll: true,
-                    reportDir: 'report',
-                    reportFiles: 'index.html',
-                    reportName: 'JMeter Report'
-                ])
+                bat '''
+                    powershell -Command "Compress-Archive -Path report -DestinationPath report.zip -Force"
+                '''
             }
         }
     }
@@ -57,7 +53,7 @@ pipeline {
     post {
         always {
             emailext(
-                to: env.EMAIL_TO,
+                to: "${env.EMAIL_TO}",
                 subject: "${env.JOB_NAME} - Build #${env.BUILD_NUMBER} - ${currentBuild.currentResult}",
                 body: """
 Build Status: ${currentBuild.currentResult}
@@ -65,8 +61,11 @@ Build Status: ${currentBuild.currentResult}
 Project: ${env.JOB_NAME}
 Build Number: ${env.BUILD_NUMBER}
 
-Check details: ${env.BUILD_URL}
-"""
+Report is attached (ZIP file).
+Open Jenkins for full details:
+${env.BUILD_URL}
+""",
+                attachmentsPattern: "report.zip"
             )
         }
     }
