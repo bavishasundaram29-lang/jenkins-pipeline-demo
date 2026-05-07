@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        JMX_FILE = "SCR01_Jpetstore.jmx"
+        JMX_FILE = "jpetstore_jenkins\\SCR01_Jpetstore.jmx"
         RESULTS = "results.jtl"
         REPORT_DIR = "report"
         LOG_FILE = "jmeter.log"
@@ -17,11 +17,11 @@ pipeline {
             }
         }
 
-        stage('Verify Files') {
+        stage('Verify Workspace') {
             steps {
                 bat """
-                echo ===== Workspace Files =====
-                dir
+                echo ===== FULL WORKSPACE STRUCTURE =====
+                dir /s
                 """
             }
         }
@@ -29,7 +29,7 @@ pipeline {
         stage('Clean Workspace') {
             steps {
                 bat """
-                echo Cleaning old reports...
+                echo Cleaning old files...
 
                 if exist %REPORT_DIR% rmdir /s /q %REPORT_DIR%
                 if exist %RESULTS% del /f /q %RESULTS%
@@ -43,7 +43,7 @@ pipeline {
         stage('Run JMeter Test') {
             steps {
                 bat """
-                echo Running JMeter test using %JMX_FILE%...
+                echo Running JMeter Test using %JMX_FILE%...
 
                 jmeter -n -t %JMX_FILE% ^
                 -l %RESULTS% ^
@@ -85,7 +85,7 @@ pipeline {
                 body: """
                 Hi,
 
-                JMeter execution completed.
+                Your JMeter execution has completed.
 
                 Build Number: ${BUILD_NUMBER}
                 Status: ${currentBuild.currentResult}
