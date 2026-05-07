@@ -69,7 +69,7 @@ pipeline {
 
                 mimeType: 'text/html',
 
-                to: 'yourmail@gmail.com'
+                to: 'bavishasundaram29@gmail.com'
             )
         }
 
