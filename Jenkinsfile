@@ -10,9 +10,14 @@ pipeline {
 
     stages {
 
-        stage('Checkout') {
+        stage('Clean Old Reports') {
             steps {
-                echo "Code already checked out by Jenkins SCM"
+                echo "Deleting old report and results..."
+
+                bat """
+                if exist ${REPORT_DIR} rmdir /s /q ${REPORT_DIR}
+                if exist ${RESULTS} del /f /q ${RESULTS}
+                """
             }
         }
 
@@ -31,14 +36,7 @@ pipeline {
 
         stage('Verify Report') {
             steps {
-                echo "Verifying HTML report..."
-
-                bat """
-                if not exist ${REPORT_DIR}\\index.html (
-                    echo Report not generated
-                    exit 1
-                )
-                """
+                bat "if not exist ${REPORT_DIR}\\index.html exit 1"
             }
         }
     }
@@ -46,49 +44,22 @@ pipeline {
     post {
 
         success {
-            echo "Build Successful - Sending Email"
-
             emailext (
-                subject: "✔ JMeter Report Generated - Build #${env.BUILD_NUMBER}",
-                body: """
-                Hi Team,
-
-                JMeter test executed successfully.
-
-                📌 Build Number: ${env.BUILD_NUMBER}
-                📂 Workspace: ${env.WORKSPACE}
-                📊 Report Path: ${env.WORKSPACE}\\${REPORT_DIR}\\index.html
-
-                Please find attached full HTML report.
-
-                Regards,
-                Jenkins Pipeline
-                """,
-                attachmentsPattern: "${REPORT_DIR}/**/*",
-                mimeType: 'text/html'
+                subject: "✔ JMeter Report - Build #${env.BUILD_NUMBER}",
+                body: "Test completed successfully. Report attached.",
+                attachmentsPattern: "${REPORT_DIR}/**/*"
             )
         }
 
         failure {
-            echo "Build Failed - Sending Email"
-
             emailext (
-                subject: "❌ JMeter Test Failed - Build #${env.BUILD_NUMBER}",
-                body: """
-                Hi Team,
-
-                JMeter test execution failed.
-
-                Please check Jenkins logs for details.
-
-                Regards,
-                Jenkins Pipeline
-                """
+                subject: "❌ JMeter Failed - Build #${env.BUILD_NUMBER}",
+                body: "Check Jenkins logs for details."
             )
         }
 
         always {
-            echo "Pipeline execution completed"
+            echo "Pipeline finished"
         }
     }
 }
