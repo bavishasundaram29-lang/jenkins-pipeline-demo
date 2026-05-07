@@ -2,36 +2,36 @@ pipeline {
     agent any
 
     environment {
-        EMAIL_TO = "bavishasundaram29@gmail.com"
+        JMETER_HOME = 'C:\\apache-jmeter-5.6.3\\apache-jmeter-5.6.3'
     }
-
 
     stages {
 
         stage('Checkout Code') {
             steps {
-                git url: 'https://github.com/bavishasundaram29-lang/jenkins-pipeline-demo.git',
-                    branch: 'main'
+                git branch: 'main',
+                url: 'https://github.com/bavishasundaram29-lang/jenkins-pipeline-demo.git'
             }
         }
 
         stage('Clean Workspace') {
             steps {
                 bat '''
-                    if exist report rmdir /s /q report
-                    if exist results.jtl del /f /q results.jtl
+                if exist report rmdir /s /q report
+                if exist report.zip del /f /q report.zip
+                if exist results.jtl del /f /q results.jtl
                 '''
             }
         }
 
         stage('Run JMeter Test') {
             steps {
-                bat '''
-                C:\\apache-jmeter-5.6.3\\apache-jmeter-5.6.3\\bin\\jmeter.bat -n ^
+                bat """
+                %JMETER_HOME%\\bin\\jmeter.bat -n ^
                 -t jpetstore_jenkins\\SCR01_Jpetstore.jmx ^
                 -l results.jtl ^
                 -e -o report
-                '''
+                """
             }
         }
 
@@ -48,54 +48,37 @@ pipeline {
             }
         }
 
-        stage('Verify Report') {
+        stage('Create ZIP Report') {
             steps {
-                bat '''
-                echo Report Files:
-                dir report
+                powershell '''
+                Compress-Archive -Path report\\* -DestinationPath report.zip -Force
                 '''
             }
         }
     }
 
     post {
-
-        success {
-
-            emailext(
-                to: "${EMAIL_TO}",
-
-                subject: "JMeter Build Success - ${BUILD_NUMBER}",
-
-                body: """
-Build completed successfully.
-
-JMeter HTML Report:
-${BUILD_URL}JMeter_20HTML_20Report/
-
-Build URL:
-${BUILD_URL}
-                """,
-
-                attachLog: true
-            )
-        }
-
-        failure {
+        always {
 
             emailext(
-                to: "${EMAIL_TO}",
-
-                subject: "JMeter Build Failed - ${BUILD_NUMBER}",
-
+                subject: "JMeter Test Report - Build #${BUILD_NUMBER}",
                 body: """
-Build failed.
+                Build Completed Successfully.
 
-Check Jenkins:
-${BUILD_URL}
+                Job Name: ${JOB_NAME}
+                Build Number: ${BUILD_NUMBER}
+
+                JMeter HTML Report attached.
+
+                Jenkins URL:
+                ${BUILD_URL}
                 """,
 
-                attachLog: true
+                to: 'bavishasundaram29@gmail.com',
+
+                attachmentsPattern: 'report.zip',
+
+                mimeType: 'text/plain'
             )
         }
     }
