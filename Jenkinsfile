@@ -35,31 +35,9 @@ pipeline {
                 -l %RESULTS% ^
                 -j %LOG_FILE%
 
-                echo Test execution completed
-                """
-            }
-        }
+                jmeter -g %RESULTS% -o %REPORT_DIR%
 
-        stage('Generate HTML Report') {
-            steps {
-                bat """
-                echo Generating HTML report...
-
-                if exist %RESULTS% (
-                    jmeter -g %RESULTS% -o %REPORT_DIR%
-                ) else (
-                    echo ERROR: results.jtl not found
-                    exit /b 1
-                )
-                """
-            }
-        }
-
-        stage('Verify Report') {
-            steps {
-                bat """
-                echo ===== CHECK REPORT =====
-                dir %REPORT_DIR%
+                echo Test Completed
                 """
             }
         }
@@ -69,29 +47,39 @@ pipeline {
                 archiveArtifacts artifacts: '**/*.jtl, **/report/**, **/*.log', fingerprint: true
             }
         }
+
+        stage('Publish HTML Report') {
+            steps {
+                publishHTML([
+                    reportDir: 'report',
+                    reportFiles: 'index.html',
+                    reportName: 'JMeter HTML Report',
+                    keepAll: true,
+                    alwaysLinkToLastBuild: true
+                ])
+            }
+        }
     }
 
     post {
 
         always {
-            echo "Sending report email..."
-
             emailext (
                 to: "bavishasundaram29@gmail.com",
-                subject: "JMeter Test Report - Build ${BUILD_NUMBER}",
+                subject: "JMeter Report - Build ${BUILD_NUMBER}",
                 body: """
                 Hi,
 
-                Your JMeter test has completed.
+                Your JMeter test execution is completed successfully.
 
                 Build Number: ${BUILD_NUMBER}
                 Status: ${currentBuild.currentResult}
 
-                The HTML report is attached.
+                👉 View Report in Jenkins:
+                ${BUILD_URL}JMeter_HTML_Report/
 
                 Thanks
-                """,
-                attachmentsPattern: "results.jtl, jmeter.log, report/index.html"
+                """
             )
         }
     }
