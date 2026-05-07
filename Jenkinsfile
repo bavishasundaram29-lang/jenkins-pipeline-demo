@@ -1,9 +1,14 @@
 pipeline {
     agent any
 
+    environment {
+        JMETER_HOME = "C:\\apache-jmeter-5.6.3\\apache-jmeter-5.6.3\\bin"
+        EMAIL_TO = "bavishasundaram29@gmail.com"
+    }
+
     stages {
 
-        stage('Checkout') {
+        stage('Checkout Code') {
             steps {
                 checkout scm
             }
@@ -21,7 +26,7 @@ pipeline {
         stage('Run JMeter Test') {
             steps {
                 bat """
-                C:\\apache-jmeter-5.6.3\\apache-jmeter-5.6.3\\bin\\jmeter.bat ^
+                %JMETER_HOME%\\jmeter.bat ^
                 -n ^
                 -t jpetstore_jenkins\\SCR01_Jpetstore.jmx ^
                 -l results.jtl ^
@@ -38,7 +43,8 @@ pipeline {
                     reportFiles: 'index.html',
                     reportName: 'JMeter Report',
                     keepAll: true,
-                    alwaysLinkToLastBuild: true
+                    alwaysLinkToLastBuild: true,
+                    allowMissing: false
                 ])
             }
         }
@@ -47,53 +53,40 @@ pipeline {
     post {
 
         success {
-
             emailext(
-                subject: "JMeter Test Report - SUCCESS - Build #${BUILD_NUMBER}",
-
+                to: "${EMAIL_TO}",
+                subject: "✅ SUCCESS - JMeter Build #${BUILD_NUMBER}",
                 body: """
-                <h2>JMeter Test Execution Successful</h2>
+                <h2 style="color:green;">JMeter Test Passed</h2>
 
-                <p><b>Job Name:</b> ${JOB_NAME}</p>
+                <p><b>Job:</b> ${JOB_NAME}</p>
                 <p><b>Build Number:</b> ${BUILD_NUMBER}</p>
 
                 <p>
-                Open Report:
-                <a href="${BUILD_URL}JMeter_Report/">
-                Click Here
-                </a>
+                📊 <a href="${BUILD_URL}JMeter_Report/">Open Jenkins Report</a>
                 </p>
 
                 <p>Regards,<br>Jenkins</p>
                 """,
-
-                mimeType: 'text/html',
-
-                to: 'bavishasundaram29@gmail.com'
+                mimeType: 'text/html'
             )
         }
 
         failure {
-
             emailext(
-                subject: "JMeter Test FAILED - Build #${BUILD_NUMBER}",
-
+                to: "${EMAIL_TO}",
+                subject: "❌ FAILED - JMeter Build #${BUILD_NUMBER}",
                 body: """
-                <h2>Build Failed</h2>
+                <h2 style="color:red;">JMeter Test Failed</h2>
 
-                <p>Check Jenkins console output.</p>
+                <p><b>Job:</b> ${JOB_NAME}</p>
+                <p><b>Build Number:</b> ${BUILD_NUMBER}</p>
 
                 <p>
-                Build URL:
-                <a href="${BUILD_URL}">
-                Open Build
-                </a>
+                🔍 <a href="${BUILD_URL}console">View Console Logs</a>
                 </p>
                 """,
-
-                mimeType: 'text/html',
-
-                to: 'bavishasundaram29@gmail.com'
+                mimeType: 'text/html'
             )
         }
     }
