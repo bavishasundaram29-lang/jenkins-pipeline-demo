@@ -4,62 +4,94 @@ pipeline {
     environment {
         JMETER_HOME = "C:\\apache-jmeter-5.6.3\\apache-jmeter-5.6.3"
         TEST_PLAN = "jpetstore_jenkins\\SCR01_Jpetstore.jmx"
-        RESULTS = "results.jtl"
+        RESULTS_FILE = "results.jtl"
         REPORT_DIR = "report"
     }
 
     stages {
 
-        stage('Clean Old Reports') {
+        stage('Checkout') {
             steps {
-                echo "Deleting old report and results..."
+                echo "Using SCM checkout (already done by Jenkins)"
+            }
+        }
 
-                bat """
-                if exist ${REPORT_DIR} rmdir /s /q ${REPORT_DIR}
-                if exist ${RESULTS} del /f /q ${RESULTS}
-                """
+        stage('Clean Workspace') {
+            steps {
+                echo "Cleaning old results and report..."
+
+                bat '''
+                    if exist results.jtl del /f /q results.jtl
+                    if exist report rmdir /s /q report
+                    mkdir report
+                '''
             }
         }
 
         stage('Run JMeter Test') {
             steps {
-                echo "Running JMeter performance test..."
+                echo "Executing JMeter test..."
 
                 bat """
-                ${JMETER_HOME}\\bin\\jmeter.bat -n ^
-                -t ${TEST_PLAN} ^
-                -l ${RESULTS} ^
-                -e -o ${REPORT_DIR}
+                    ${JMETER_HOME}\\bin\\jmeter.bat -n ^
+                    -t ${TEST_PLAN} ^
+                    -l ${RESULTS_FILE} ^
+                    -e -o ${REPORT_DIR}
                 """
             }
         }
 
-        stage('Verify Report') {
+        stage('Verify Report Generation') {
             steps {
-                bat "if not exist ${REPORT_DIR}\\index.html exit 1"
+                echo "Verifying output files..."
+
+                bat '''
+                    echo Checking JTL file...
+                    dir results.jtl
+
+                    echo Checking HTML report folder...
+                    dir report
+                '''
             }
         }
     }
 
     post {
 
+        always {
+            echo "Archiving test results..."
+
+            archiveArtifacts artifacts: 'results.jtl, report/**', fingerprint: true
+        }
+
         success {
+            echo "Build SUCCESS - Sending email with report"
+
             emailext (
-                subject: "✔ JMeter Report - Build #${env.BUILD_NUMBER}",
-                body: "Test completed successfully. Report attached.",
-                attachmentsPattern: "${REPORT_DIR}/**/*"
+                to: "your_email@gmail.com",
+                subject: "✅ JMeter Report Success - Build #${BUILD_NUMBER}",
+                body: """
+                    <h2>JMeter Performance Test Completed Successfully</h2>
+                    <p><b>Build Number:</b> ${BUILD_NUMBER}</p>
+                    <p><b>Status:</b> SUCCESS</p>
+                    <p>Attached is the HTML report.</p>
+                """,
+                attachmentsPattern: "report/**"
             )
         }
 
         failure {
-            emailext (
-                subject: "❌ JMeter Failed - Build #${env.BUILD_NUMBER}",
-                body: "Check Jenkins logs for details."
-            )
-        }
+            echo "Build FAILED - Sending failure email"
 
-        always {
-            echo "Pipeline finished"
+            emailext (
+                to: "your_email@gmail.com",
+                subject: "❌ JMeter Build Failed - #${BUILD_NUMBER}",
+                body: """
+                    <h2>JMeter Test Failed</h2>
+                    <p><b>Build Number:</b> ${BUILD_NUMBER}</p>
+                    <p>Please check Jenkins console logs.</p>
+                """
+            )
         }
     }
 }
