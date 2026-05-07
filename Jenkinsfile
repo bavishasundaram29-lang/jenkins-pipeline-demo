@@ -9,22 +9,22 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/your-repo/your-project.git'
+                git url: 'https://github.com/bavishasundaram29-lang/jenkins-pipeline-demo.git'
             }
         }
 
         stage('Run Tests / Build') {
             steps {
                 echo "Running build or JMeter tests..."
-                
-                // Example for JMeter (uncomment if needed)
+
+                // If you are using JMeter, uncomment below:
                 // bat 'jmeter -n -t test.jmx -l result.jtl -e -o report'
             }
         }
 
         stage('Generate Report Check') {
             steps {
-                echo "Checking report files..."
+                echo "Checking workspace files..."
                 bat 'dir'
             }
         }
@@ -33,28 +33,25 @@ pipeline {
     post {
 
         always {
-            script {
-                emailext(
-                    to: "bavishasundar@gmail.com",
-                    subject: "Jenkins Build Report - ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                    body: """
+            emailext(
+                to: "bavishasundar@gmail.com",
+                subject: "Jenkins Build Report - ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                body: """
 Hello,
 
-Build Completed.
+Build Completed Successfully.
 
 Job Name: ${env.JOB_NAME}
 Build Number: ${env.BUILD_NUMBER}
 Status: ${currentBuild.currentResult}
 
-Please find attached reports (if generated).
+Please find attached reports if available.
 
 Thanks,
 Jenkins
 """,
-
-                    attachmentsPattern: "**/*.html, **/*.jtl, **/index.html"
-                )
-            }
+                attachmentsPattern: "**/*.html, **/*.jtl, **/index.html"
+            )
         }
     }
 }
