@@ -20,7 +20,7 @@ pipeline {
 
                 jmeter -g results.jtl -o report
 
-                echo Report generated:
+                echo Report folder check:
                 dir report
                 '''
             }
@@ -29,14 +29,20 @@ pipeline {
 
     post {
         always {
-            publishHTML([
-                allowMissing: false,
-                alwaysLinkToLastBuild: true,
-                keepAll: true,
-                reportDir: 'report',
-                reportFiles: 'index.html',
-                reportName: 'JMeter HTML Report'
-            ])
+            script {
+                if (fileExists('report/index.html')) {
+                    publishHTML([
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'report',
+                        reportFiles: 'index.html',
+                        reportName: 'JMeter HTML Report'
+                    ])
+                } else {
+                    echo "❌ HTML report not generated"
+                }
+            }
         }
     }
 }
