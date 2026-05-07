@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         JMX_FILE = "jpetstore_jenkins\\SCR01_Jpetstore.jmx"
-        RESULTS = "results.jtl"
+        RESULTS_FILE = "results.jtl"
         REPORT_DIR = "report"
         LOG_FILE = "jmeter.log"
     }
@@ -22,10 +22,10 @@ pipeline {
                 echo Cleaning workspace...
 
                 if exist %REPORT_DIR% rmdir /s /q %REPORT_DIR%
-                if exist %RESULTS% del /f /q %RESULTS%
+                if exist %RESULTS_FILE% del /f /q %RESULTS_FILE%
                 if exist %LOG_FILE% del /f /q %LOG_FILE%
 
-                echo Cleanup done
+                echo Cleanup completed
                 """
             }
         }
@@ -36,10 +36,10 @@ pipeline {
                 echo Running JMeter Test...
 
                 jmeter -n -t %JMX_FILE% ^
-                -l %RESULTS% ^
+                -l %RESULTS_FILE% ^
                 -j %LOG_FILE%
 
-                echo Test Completed
+                echo Test execution completed
                 """
             }
         }
@@ -49,22 +49,35 @@ pipeline {
                 bat """
                 echo Generating HTML Report...
 
-                if not exist %RESULTS% (
+                if not exist %RESULTS_FILE% (
                     echo ERROR: results.jtl not found
                     exit /b 1
                 )
 
-                jmeter -g %RESULTS% -o %REPORT_DIR%
+                jmeter -g %RESULTS_FILE% -o %REPORT_DIR%
 
-                echo ===== REPORT GENERATED =====
+                echo Report generated successfully
                 dir %REPORT_DIR%
                 """
             }
         }
 
-        stage('Archive Reports') {
+        stage('Publish Report in Jenkins UI') {
             steps {
-                archiveArtifacts artifacts: '**/report/**, **/*.jtl, **/*.log', fingerprint: true
+                publishHTML([
+                    allowMissing: false,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true,
+                    reportDir: 'report',
+                    reportFiles: 'index.html',
+                    reportName: 'JMeter HTML Report'
+                ])
+            }
+        }
+
+        stage('Archive Artifacts') {
+            steps {
+                archiveArtifacts artifacts: '**/report/**, results.jtl, jmeter.log'
             }
         }
     }
