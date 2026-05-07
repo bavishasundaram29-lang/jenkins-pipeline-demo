@@ -2,85 +2,87 @@ pipeline {
     agent any
 
     environment {
-        JMETER_HOME = 'C:\\apache-jmeter-5.6.3\\apache-jmeter-5.6.3'
+        JMETER_HOME = "C:\\apache-jmeter-5.6.3\\apache-jmeter-5.6.3"
+        TEST_PLAN = "jpetstore_jenkins\\SCR01_Jpetstore.jmx"
+        RESULTS = "results.jtl"
+        REPORT_DIR = "report"
     }
 
     stages {
 
         stage('Checkout Code') {
             steps {
+                echo "Cloning repository..."
                 git branch: 'main',
-                url: 'https://github.com/bavishasundaram29-lang/jenkins-pipeline-demo.git'
-            }
-        }
-
-    
-        stage('Clean Workspace') {
-            steps {
-                bat '''
-                if exist report rmdir /s /q report
-                if exist report.zip del /f /q report.zip
-                if exist results.jtl del /f /q results.jtl
-                '''
+                    url: 'https://github.com/YOUR_REPO_URL.git'
             }
         }
 
         stage('Run JMeter Test') {
             steps {
+                echo "Executing JMeter Test..."
                 bat """
-                %JMETER_HOME%\\bin\\jmeter.bat -n ^
-                -t jpetstore_jenkins\\SCR01_Jpetstore.jmx ^
-                -l results.jtl ^
-                -e -o report
+                ${JMETER_HOME}\\bin\\jmeter.bat -n ^
+                -t ${TEST_PLAN} ^
+                -l ${RESULTS} ^
+                -e -o ${REPORT_DIR}
                 """
             }
         }
 
-        stage('Publish HTML Report') {
+        stage('Verify Report') {
             steps {
-                publishHTML([
-                    allowMissing: false,
-                    alwaysLinkToLastBuild: true,
-                    keepAll: true,
-                    reportDir: 'report',
-                    reportFiles: 'index.html',
-                    reportName: 'JMeter HTML Report'
-                ])
-            }
-        }
-
-        stage('Create ZIP Report') {
-            steps {
-                powershell '''
-                Compress-Archive -Path report\\* -DestinationPath report.zip -Force
-                '''
+                echo "Checking report generation..."
+                bat "if not exist ${REPORT_DIR}\\index.html exit 1"
             }
         }
     }
 
     post {
-        always {
 
-            emailext(
-                subject: "JMeter Test Report - Build #${BUILD_NUMBER}",
+        success {
+            echo "Build Successful - Sending Email with Report"
+
+            emailext (
+                subject: "✔ JMeter Test Completed - Build #${env.BUILD_NUMBER}",
                 body: """
-                Build Completed Successfully.
+                Hi Team,
 
-                Job Name: ${JOB_NAME}
-                Build Number: ${BUILD_NUMBER}
+                JMeter performance test has completed successfully.
 
-                JMeter HTML Report attached.
+                📌 Build Number: ${env.BUILD_NUMBER}
+                📊 Report Location: ${env.WORKSPACE}\\${REPORT_DIR}\\index.html
 
-                Jenkins URL:
-                ${BUILD_URL}
+                Please find attached HTML report.
+
+                Regards,
+                Jenkins Pipeline
                 """,
-
-                to: 'bavishasundaram29@gmail.com',
-
-                attachmentsPattern: 'report.zip',
-
-                mimeType: 'text/plain'
+                attachmentsPattern: "${REPORT_DIR}/**/*",
+                mimeType: 'text/html'
             )
+        }
+
+        failure {
+            echo "Build Failed - Sending Failure Email"
+
+            emailext (
+                subject: "❌ JMeter Test Failed - Build #${env.BUILD_NUMBER}",
+                body: """
+                Hi Team,
+
+                JMeter test execution failed.
+
+                Please check Jenkins logs.
+
+                Regards,
+                Jenkins Pipeline
+                """
+            )
+        }
+
+        always {
+            echo "Pipeline Execution Completed"
         }
     }
 }
