@@ -29,14 +29,20 @@ pipeline {
 
     post {
         always {
-            publishHTML([
-                allowMissing: false,
-                alwaysLinkToLastBuild: true,
-                keepAll: true,
-                reportDir: 'report',
-                reportFiles: 'index.html',
-                reportName: 'JMeter HTML Report'
-            ])
+            script {
+                if (fileExists('report/index.html')) {
+                    publishHTML([
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'report',
+                        reportFiles: 'index.html',
+                        reportName: 'JMeter HTML Report'
+                    ])
+                } else {
+                    echo "❌ Report NOT generated"
+                }
+            }
         }
     }
 }
