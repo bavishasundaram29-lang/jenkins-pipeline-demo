@@ -5,6 +5,7 @@ pipeline {
         EMAIL_TO = "bavishasundaram29@gmail.com"
     }
 
+
     stages {
 
         stage('Checkout Code') {
