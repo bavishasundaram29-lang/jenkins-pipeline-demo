@@ -4,7 +4,6 @@ pipeline {
     environment {
         REPORT_DIR = "report"
         JTL_FILE = "results.jtl"
-        ZIP_FILE = "JMeter_Report.zip"
         EMAIL_TO = "bavishasundar@gmail.com"
     }
 
@@ -17,9 +16,8 @@ pipeline {
 
                 IF EXIST report rmdir /S /Q report
                 IF EXIST results.jtl del /Q results.jtl
-                IF EXIST JMeter_Report.zip del /Q JMeter_Report.zip
 
-                echo Workspace cleaned
+                echo Clean completed
                 '''
             }
         }
@@ -27,11 +25,9 @@ pipeline {
         stage('Run JMeter Test') {
             steps {
                 bat '''
-                echo Running JMeter test...
+                echo Running JMeter Test...
 
                 jmeter -n -t jpetstore_jenkins/SCR01_Jpetstore.jmx -l results.jtl
-
-                echo JMeter execution completed
                 '''
             }
         }
@@ -39,20 +35,14 @@ pipeline {
         stage('Generate HTML Report') {
             steps {
                 bat '''
-                echo Generating HTML report...
+                echo Generating HTML Report...
 
                 IF EXIST report rmdir /S /Q report
-                timeout /t 3 > nul
 
                 jmeter -g results.jtl -o report
 
-                echo Verifying report...
+                echo Report generated
                 dir report
-
-                IF NOT EXIST report\\index.html (
-                    echo ERROR: HTML report generation failed
-                    exit /b 1
-                )
                 '''
             }
         }
@@ -69,52 +59,37 @@ pipeline {
                 ])
             }
         }
-
-        stage('Create ZIP') {
-            steps {
-                bat '''
-                echo Creating ZIP file...
-
-                powershell -Command "Compress-Archive -Path report\\* -DestinationPath JMeter_Report.zip -Force"
-
-                dir
-                '''
-            }
-        }
     }
 
     post {
 
         success {
             script {
-                echo "Checking ZIP before sending email..."
 
-                if (fileExists('JMeter_Report.zip')) {
+                // Jenkins UI report URL
+                def reportUrl = "${env.BUILD_URL}JMeter_20HTML_20Report/"
 
-                    emailext (
-                        to: "${EMAIL_TO}",
-                        subject: "📊 JMeter Report SUCCESS - Build #${env.BUILD_NUMBER}",
-                        body: """
+                emailext (
+                    to: "${EMAIL_TO}",
+                    subject: "✅ JMeter Report SUCCESS - Build #${env.BUILD_NUMBER}",
+                    body: """
 Hi,
 
 Your JMeter test completed successfully.
 
-✔ Job: ${env.JOB_NAME}
-✔ Build: ${env.BUILD_NUMBER}
+✔ Job Name: ${env.JOB_NAME}
+✔ Build Number: ${env.BUILD_NUMBER}
 
-📊 View report in Jenkins:
-${env.BUILD_URL}JMeter_20HTML_20Report/
+📊 Jenkins HTML Report:
+${reportUrl}
+
+You can open the report directly from Jenkins.
 
 Regards,
 Jenkins
 """,
-                        attachmentsPattern: 'JMeter_Report.zip',
-                        mimeType: 'text/plain'
-                    )
-
-                } else {
-                    echo "ZIP file not found. Email not sent."
-                }
+                    mimeType: 'text/plain'
+                )
             }
         }
 
@@ -130,11 +105,12 @@ Your JMeter test FAILED.
 ✔ Job: ${env.JOB_NAME}
 ✔ Build: ${env.BUILD_NUMBER}
 
-Please check Jenkins logs.
+Check Jenkins logs for details.
 
 Regards,
 Jenkins
-"""
+""",
+                mimeType: 'text/plain'
             )
         }
     }
