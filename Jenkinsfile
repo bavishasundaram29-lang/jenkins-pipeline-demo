@@ -2,52 +2,53 @@ pipeline {
     agent any
 
     environment {
-        REPORT_DIR = "report"
-        JTL_FILE = "results.jtl"
-        EMAIL_TO = "bavishasundar@gmail.com"
+        JMETER_HOME = "C:\\apache-jmeter-5.6.3\\apache-jmeter-5.6.3"
+        REPORT_DIR  = "report"
+        JTL_FILE    = "results.jtl"
     }
 
     stages {
 
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
         stage('Clean Workspace') {
             steps {
-                bat '''
+                bat """
                 echo Cleaning workspace...
-
-                IF EXIST report rmdir /S /Q report
-                IF EXIST results.jtl del /Q results.jtl
-
-                echo Clean completed
-                '''
+                IF EXIST %REPORT_DIR% rmdir /S /Q %REPORT_DIR%
+                IF EXIST %JTL_FILE% del /Q %JTL_FILE%
+                IF EXIST JMeter_Report.zip del /Q JMeter_Report.zip
+                echo Cleanup completed
+                """
             }
         }
 
         stage('Run JMeter Test') {
             steps {
-                bat '''
+                bat """
                 echo Running JMeter Test...
-
-                jmeter -n -t jpetstore_jenkins/SCR01_Jpetstore.jmx -l results.jtl
-                '''
+                %JMETER_HOME%\\bin\\jmeter.bat -n -t jpetstore_jenkins\\SCR01_Jpetstore.jmx -l %JTL_FILE%
+                """
             }
         }
 
         stage('Generate HTML Report') {
             steps {
-                bat '''
+                bat """
                 echo Generating HTML Report...
 
-                IF EXIST report rmdir /S /Q report
+                IF EXIST %REPORT_DIR% rmdir /S /Q %REPORT_DIR%
 
-                jmeter -g results.jtl -o report
-
-                echo Report generated
-                dir report
-                '''
+                %JMETER_HOME%\\bin\\jmeter.bat -g %JTL_FILE% -o %REPORT_DIR%
+                """
             }
         }
 
-        stage('Publish Report in Jenkins UI') {
+        stage('Publish HTML Report in Jenkins UI') {
             steps {
                 publishHTML([
                     allowMissing: false,
@@ -55,8 +56,14 @@ pipeline {
                     keepAll: true,
                     reportDir: 'report',
                     reportFiles: 'index.html',
-                    reportName: 'JMeter HTML Report'
+                    reportName: 'JMeter_HTML_Report'
                 ])
+            }
+        }
+
+        stage('Archive Report') {
+            steps {
+                archiveArtifacts artifacts: 'report/**', fingerprint: true
             }
         }
     }
@@ -65,52 +72,39 @@ pipeline {
 
         success {
             script {
-
                 // Jenkins UI report URL
-                def reportUrl = "${env.BUILD_URL}JMeter_20HTML_20Report/"
+                def reportUrl = "${env.BUILD_URL}JMeter_HTML_Report/"
 
-                emailext (
-                    to: "${EMAIL_TO}",
-                    subject: "✅ JMeter Report SUCCESS - Build #${env.BUILD_NUMBER}",
+                echo "Report URL: ${reportUrl}"
+
+                emailext(
+                    to: "bavishasundar@gmail.com",
+                    subject: "JMeter Test Report - Build #${env.BUILD_NUMBER}",
                     body: """
 Hi,
 
-Your JMeter test completed successfully.
+Your JMeter test has been completed successfully.
 
-✔ Job Name: ${env.JOB_NAME}
-✔ Build Number: ${env.BUILD_NUMBER}
-
-📊 Jenkins HTML Report:
+ Jenkins Report URL:
 ${reportUrl}
 
-You can open the report directly from Jenkins.
+ Build Details:
+- Job: ${env.JOB_NAME}
+- Build Number: ${env.BUILD_NUMBER}
+- Status: SUCCESS
 
-Regards,
-Jenkins
-""",
-                    mimeType: 'text/plain'
+Thanks,
+Jenkins CI
+"""
                 )
             }
         }
 
         failure {
-            emailext (
-                to: "${EMAIL_TO}",
-                subject: "❌ JMeter FAILED - Build #${env.BUILD_NUMBER}",
-                body: """
-Hi,
-
-Your JMeter test FAILED.
-
-✔ Job: ${env.JOB_NAME}
-✔ Build: ${env.BUILD_NUMBER}
-
-Check Jenkins logs for details.
-
-Regards,
-Jenkins
-""",
-                mimeType: 'text/plain'
+            emailext(
+                to: "bavishasundar@gmail.com",
+                subject: "JMeter Test FAILED - Build #${env.BUILD_NUMBER}",
+                body: "Build failed. Please check Jenkins logs."
             )
         }
     }
