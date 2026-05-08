@@ -19,7 +19,7 @@ pipeline {
                 IF EXIST results.jtl del /Q results.jtl
                 IF EXIST JMeter_Report.zip del /Q JMeter_Report.zip
 
-                echo Cleanup completed
+                echo Workspace cleaned
                 '''
             }
         }
@@ -27,9 +27,11 @@ pipeline {
         stage('Run JMeter Test') {
             steps {
                 bat '''
-                echo Running JMeter Test...
+                echo Running JMeter test...
 
                 jmeter -n -t jpetstore_jenkins/SCR01_Jpetstore.jmx -l results.jtl
+
+                echo JMeter execution completed
                 '''
             }
         }
@@ -37,14 +39,14 @@ pipeline {
         stage('Generate HTML Report') {
             steps {
                 bat '''
-                echo Generating HTML Report...
+                echo Generating HTML report...
 
-                rmdir /S /Q report
-                timeout /t 2 > nul
+                IF EXIST report rmdir /S /Q report
+                timeout /t 3 > nul
 
                 jmeter -g results.jtl -o report
 
-                echo Validating report...
+                echo Verifying report...
                 dir report
 
                 IF NOT EXIST report\\index.html (
@@ -68,7 +70,7 @@ pipeline {
             }
         }
 
-        stage('Zip Report') {
+        stage('Create ZIP') {
             steps {
                 bat '''
                 echo Creating ZIP file...
@@ -95,12 +97,12 @@ pipeline {
                         body: """
 Hi,
 
-Your JMeter performance test completed successfully.
+Your JMeter test completed successfully.
 
 ✔ Job: ${env.JOB_NAME}
-✔ Build Number: ${env.BUILD_NUMBER}
+✔ Build: ${env.BUILD_NUMBER}
 
-📊 Jenkins Report:
+📊 View report in Jenkins:
 ${env.BUILD_URL}JMeter_20HTML_20Report/
 
 Regards,
