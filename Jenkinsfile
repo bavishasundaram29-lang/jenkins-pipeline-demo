@@ -11,7 +11,8 @@ pipeline {
         stage('Clean Workspace') {
             steps {
                 bat '''
-                echo Cleaning old data...
+                echo Cleaning old files...
+
                 IF EXIST report rmdir /S /Q report
                 IF EXIST results.jtl del /Q results.jtl
                 IF EXIST JMeter_Report.zip del /Q JMeter_Report.zip
@@ -23,6 +24,7 @@ pipeline {
             steps {
                 bat '''
                 echo Running JMeter Test...
+
                 jmeter -n -t jpetstore_jenkins/SCR01_Jpetstore.jmx -l results.jtl
                 '''
             }
@@ -34,7 +36,7 @@ pipeline {
                 echo Generating HTML Report...
 
                 IF NOT EXIST results.jtl (
-                    echo results.jtl missing
+                    echo ERROR: results.jtl not found
                     exit /b 1
                 )
 
@@ -49,8 +51,10 @@ pipeline {
         stage('Zip Report') {
             steps {
                 bat '''
-                echo Creating ZIP file for report...
+                echo Creating ZIP file...
+
                 powershell Compress-Archive -Path report\\* -DestinationPath JMeter_Report.zip -Force
+
                 dir
                 '''
             }
@@ -60,40 +64,46 @@ pipeline {
     post {
 
         success {
-            mail to: 'bavishasundar@gmail.com',
-                 subject: "✅ JMeter Report - Build #${env.BUILD_NUMBER}",
-                 body: """
+            emailext (
+                to: 'bavishasundar@gmail.com',
+                subject: "✅ JMeter Report SUCCESS - Build #${env.BUILD_NUMBER}",
+                body: """
 Hi,
 
-Your JMeter test has completed successfully.
-
-Please find the attached HTML report (zipped).
+Your JMeter test executed successfully.
 
 Build Number: ${env.BUILD_NUMBER}
-Jenkins Job: ${env.JOB_NAME}
+Job Name: ${env.JOB_NAME}
+
+Please find the attached JMeter HTML report (ZIP).
 
 Regards,
 Jenkins
 """,
-                 attachmentsPattern: 'JMeter_Report.zip'
+                attachmentsPattern: 'JMeter_Report.zip',
+                mimeType: 'text/plain'
+            )
         }
 
         failure {
-            mail to: 'bavishasundar@gmail.com',
-                 subject: "❌ JMeter FAILED - Build #${env.BUILD_NUMBER}",
-                 body: """
+            emailext (
+                to: 'bavishasundar@gmail.com',
+                subject: "❌ JMeter FAILED - Build #${env.BUILD_NUMBER}",
+                body: """
 Hi,
 
 Your JMeter test has FAILED.
 
-Please check Jenkins console logs.
+Please check Jenkins logs for details.
 
 Build Number: ${env.BUILD_NUMBER}
-Job: ${env.JOB_NAME}
+Job Name: ${env.JOB_NAME}
 
 Regards,
 Jenkins
-"""
+""",
+                mimeType: 'text/plain'
+            )
         }
     }
 }
