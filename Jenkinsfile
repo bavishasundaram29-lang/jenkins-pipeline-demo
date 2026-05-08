@@ -75,12 +75,7 @@ pipeline {
 
                     <p><b>Build Number:</b> ${env.BUILD_NUMBER}</p>
 
-                    <p>
-                    Jenkins UI Report:
-                    <a href="${env.BUILD_URL}JMeter_20HTML_20Report/">
-                    Open Report
-                    </a>
-                    </p>
+                    
 
                     <p>
                     ZIP report attached with this email.
