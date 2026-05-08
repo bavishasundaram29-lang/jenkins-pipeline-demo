@@ -1,110 +1,84 @@
-pipeline {
-    agent any
+stage('Send Final Report Email') {
+    steps {
+        script {
 
-    environment {
-        JMETER_HOME = "C:\\apache-jmeter-5.6.3\\apache-jmeter-5.6.3"
-        REPORT_DIR  = "report"
-        JTL_FILE    = "results.jtl"
-    }
+            def buildStatus = currentBuild.currentResult
+            def reportUrl = "${env.BUILD_URL}JMeter_20HTML_20Report/"
 
-    stages {
+            def emailSubject = ""
+            def emailBody = ""
 
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
+            if (buildStatus == "SUCCESS") {
 
-        stage('Clean Workspace') {
-            steps {
-                bat """
-                echo Cleaning workspace...
-                IF EXIST %REPORT_DIR% rmdir /S /Q %REPORT_DIR%
-                IF EXIST %JTL_FILE% del /Q %JTL_FILE%
-                IF EXIST JMeter_Report.zip del /Q JMeter_Report.zip
-                echo Cleanup completed
+                emailSubject = "✅ SUCCESS: JMeter Report - Build ${env.BUILD_NUMBER}"
+
+                emailBody = """
+                <html>
+                <body>
+                <h2 style="color:green;">JMeter Test Execution Successful</h2>
+
+                <p>Hello,</p>
+
+                <p>Your JMeter performance test has been completed successfully.</p>
+
+                <table border="1" cellpadding="5" cellspacing="0">
+                    <tr>
+                        <td><b>Build Number</b></td>
+                        <td>${env.BUILD_NUMBER}</td>
+                    </tr>
+                    <tr>
+                        <td><b>Job Name</b></td>
+                        <td>${env.JOB_NAME}</td>
+                    </tr>
+                    <tr>
+                        <td><b>Status</b></td>
+                        <td style="color:green;"><b>SUCCESS</b></td>
+                    </tr>
+                </table>
+
+                <br/>
+
+                <p><b>📊 Jenkins HTML Report:</b></p>
+                <a href="${reportUrl}">Click here to view JMeter Report</a>
+
+                <br/><br/>
+                <p><b>Build Details:</b></p>
+                <a href="${env.BUILD_URL}">Open Jenkins Build</a>
+
+                <br/><br/>
+                <p>Regards,<br/>Jenkins CI/CD</p>
+                </body>
+                </html>
+                """
+
+            } else {
+
+                emailSubject = "❌ FAILURE: JMeter Report - Build ${env.BUILD_NUMBER}"
+
+                emailBody = """
+                <html>
+                <body>
+                <h2 style="color:red;">JMeter Test Failed</h2>
+
+                <p>Hello,</p>
+
+                <p>The JMeter pipeline has failed. Please check logs.</p>
+
+                <p><b>Jenkins Build:</b></p>
+                <a href="${env.BUILD_URL}">Open Build</a>
+
+                <br/><br/>
+                <p>Regards,<br/>Jenkins CI/CD</p>
+                </body>
+                </html>
                 """
             }
-        }
 
-        stage('Run JMeter Test') {
-            steps {
-                bat """
-                echo Running JMeter Test...
-                %JMETER_HOME%\\bin\\jmeter.bat -n -t jpetstore_jenkins\\SCR01_Jpetstore.jmx -l %JTL_FILE%
-                """
-            }
-        }
-
-        stage('Generate HTML Report') {
-            steps {
-                bat """
-                echo Generating HTML Report...
-
-                IF EXIST %REPORT_DIR% rmdir /S /Q %REPORT_DIR%
-
-                %JMETER_HOME%\\bin\\jmeter.bat -g %JTL_FILE% -o %REPORT_DIR%
-                """
-            }
-        }
-
-        stage('Publish HTML Report in Jenkins UI') {
-            steps {
-                publishHTML([
-                    allowMissing: false,
-                    alwaysLinkToLastBuild: true,
-                    keepAll: true,
-                    reportDir: 'report',
-                    reportFiles: 'index.html',
-                    reportName: 'JMeter_HTML_Report'
-                ])
-            }
-        }
-
-        stage('Archive Report') {
-            steps {
-                archiveArtifacts artifacts: 'report/**', fingerprint: true
-            }
-        }
-    }
-
-    post {
-
-        success {
-            script {
-                // Jenkins UI report URL
-                def reportUrl = "${env.BUILD_URL}JMeter_HTML_Report/"
-
-                echo "Report URL: ${reportUrl}"
-
-                emailext(
-                    to: "bavishasundar@gmail.com",
-                    subject: "JMeter Test Report - Build #${env.BUILD_NUMBER}",
-                    body: """
-Hi,
-
-Your JMeter test has been completed successfully.
-
- Jenkins Report URL:
-${reportUrl}
-
- Build Details:
-- Job: ${env.JOB_NAME}
-- Build Number: ${env.BUILD_NUMBER}
-- Status: SUCCESS
-
-Thanks,
-Jenkins CI
-"""
-                )
-            }
-        }
-
-        failure {
             emailext(
-                to: "bavishasundar@gmail.com",
-                subject: "JMeter Test FAILED - Build #${env.BUILD_NUMBER}",
-                body: "Build failed. Please check Jenkins logs."
+                to: 'bavishasundar@gmail.com',
+                subject: emailSubject,
+                mimeType: 'text/html',
+                body: emailBody
             )
         }
     }
