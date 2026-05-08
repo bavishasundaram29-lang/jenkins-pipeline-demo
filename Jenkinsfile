@@ -1,88 +1,101 @@
 pipeline {
     agent any
 
-    stages {
+    environment {
+        JMETER_HOME = "C:\\apache-jmeter-5.6.3\\apache-jmeter-5.6.3"
+        REPORT_DIR = "report"
+        JTL_FILE = "results.jtl"
+        ZIP_FILE = "JMeter_Report.zip"
+        EMAIL_TO = "bavishasundar@gmail.com"
+    }
 
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
+    stages {
 
         stage('Clean Workspace') {
             steps {
-                bat '''
-                    echo Cleaning workspace...
-                    IF EXIST report rmdir /S /Q report
-                    IF EXIST results.jtl del /Q results.jtl
-                    IF EXIST JMeter_Report.zip del /Q JMeter_Report.zip
-                    echo Cleanup done
-                '''
+                bat """
+                echo Cleaning workspace...
+                if exist %REPORT_DIR% rmdir /s /q %REPORT_DIR%
+                if exist %JTL_FILE% del /q %JTL_FILE%
+                if exist %ZIP_FILE% del /q %ZIP_FILE%
+                """
             }
         }
 
         stage('Run JMeter Test') {
             steps {
-                bat '''
-                    echo Running JMeter...
-                    jmeter -n -t jpetstore_jenkins/SCR01_Jpetstore.jmx -l results.jtl
-                '''
+                bat """
+                echo Running JMeter Test...
+                jmeter -n -t jpetstore_jenkins/SCR01_Jpetstore.jmx -l %JTL_FILE%
+                """
             }
         }
 
         stage('Generate HTML Report') {
             steps {
-                bat '''
-                    echo Generating HTML Report...
-                    jmeter -g results.jtl -o report
-                '''
+                bat """
+                echo Generating HTML Report...
+                jmeter -g %JTL_FILE% -o %REPORT_DIR%
+                """
             }
         }
 
-        stage('Publish Report in Jenkins UI') {
+        stage('Publish HTML Report in Jenkins UI') {
             steps {
                 publishHTML([
-                    allowMissing: false,
-                    alwaysLinkToLastBuild: true,
-                    keepAll: true,
                     reportDir: 'report',
                     reportFiles: 'index.html',
-                    reportName: 'JMeter_HTML_Report'
+                    reportName: 'JMeter HTML Report',
+                    keepAll: true,
+                    alwaysLinkToLastBuild: true,
+                    allowMissing: false
                 ])
             }
         }
 
-        stage('Create ZIP Report') {
+        stage('Zip Report') {
             steps {
-                bat '''
-                    echo Creating ZIP...
-                    powershell -Command "Compress-Archive -Path report\\* -DestinationPath JMeter_Report.zip -Force"
-                '''
+                powershell """
+                Compress-Archive -Path ${env.REPORT_DIR}\\* -DestinationPath ${env.ZIP_FILE} -Force
+                """
             }
         }
 
         stage('Send Email with ZIP Report') {
             steps {
                 script {
+                    def status = currentBuild.currentResult
+
+                    def subject = "JMeter Report - Build ${env.BUILD_NUMBER} - ${status}"
+
+                    def body = """
+                    Hello,
+
+                    Please find attached JMeter performance report ZIP.
+
+                    Build: ${env.BUILD_NUMBER}
+                    Job: ${env.JOB_NAME}
+                    Status: ${status}
+
+                    Thanks
+                    Jenkins CI
+                    """
 
                     emailext(
-                        to: 'bavishasundar@gmail.com',
-                        subject: "JMeter Report - Build ${env.BUILD_NUMBER}",
-                        mimeType: 'text/html',
-                        body: """
-                            <h2>JMeter Execution Completed</h2>
-
-                            <p><b>Build:</b> ${env.BUILD_NUMBER}</p>
-                            <p><b>Status:</b> ${currentBuild.currentResult}</p>
-
-                            <p>The full report is attached as ZIP.</p>
-                        """,
-
-                        // 🔥 IMPORTANT: ZIP attachment
-                        attachmentsPattern: 'JMeter_Report.zip, results.jtl'
+                        to: "${env.EMAIL_TO}",
+                        subject: subject,
+                        body: body,
+                        attachmentsPattern: "JMeter_Report.zip",
+                        mimeType: "text/plain"
                     )
                 }
             }
+        }
+    }
+
+    post {
+        always {
+            echo "Pipeline completed"
         }
     }
 }
