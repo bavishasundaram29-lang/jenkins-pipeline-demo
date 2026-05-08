@@ -10,7 +10,6 @@ pipeline {
 
                 if exist report rmdir /s /q report
                 if exist results.jtl del /q results.jtl
-                if exist JMeter_Report.zip del /q JMeter_Report.zip
                 '''
             }
         }
@@ -35,6 +34,16 @@ pipeline {
             }
         }
 
+        stage('Verify Report') {
+            steps {
+                bat '''
+                echo Checking generated report...
+
+                dir report
+                '''
+            }
+        }
+
         stage('Publish Report in Jenkins UI') {
             steps {
                 publishHTML([
@@ -45,14 +54,6 @@ pipeline {
                     reportFiles: 'index.html',
                     reportName: 'JMeter HTML Report'
                 ])
-            }
-        }
-
-        stage('Create ZIP File') {
-            steps {
-                powershell '''
-                Compress-Archive -Path report\\* -DestinationPath JMeter_Report.zip -Force
-                '''
             }
         }
 
@@ -69,28 +70,58 @@ pipeline {
                     <html>
                     <body>
 
-                    <h2>JMeter Execution Completed</h2>
+                    <h2 style="color:green;">
+                    JMeter Execution Completed Successfully
+                    </h2>
 
-                    <p><b>Job Name:</b> ${env.JOB_NAME}</p>
+                    <table border="1" cellpadding="5" cellspacing="0">
 
-                    <p><b>Build Number:</b> ${env.BUILD_NUMBER}</p>
+                    <tr>
+                    <td><b>Job Name</b></td>
+                    <td>${env.JOB_NAME}</td>
+                    </tr>
+
+                    <tr>
+                    <td><b>Build Number</b></td>
+                    <td>${env.BUILD_NUMBER}</td>
+                    </tr>
+
+                    <tr>
+                    <td><b>Build Status</b></td>
+                    <td>SUCCESS</td>
+                    </tr>
+
+                    </table>
+
+                    <br>
+
                     <p>
                     Jenkins UI Report:
                     <a href="${env.BUILD_URL}JMeter_20HTML_20Report/">
-                    Open Report
+                    Open JMeter HTML Report
                     </a>
                     </p>
-                    
+
+                    <br>
 
                     <p>
-                    ZIP report attached with this email.
+                    JMeter HTML report attached with this email.
+                    </p>
+
+                    <br>
+
+                    <p>
+                    Regards,<br>
+                    Jenkins CI/CD
                     </p>
 
                     </body>
                     </html>
                     """,
 
-                    attachmentsPattern: 'JMeter_Report.zip'
+                    attachmentsPattern: 'report/index.html',
+
+                    attachLog: true
                 )
             }
         }
