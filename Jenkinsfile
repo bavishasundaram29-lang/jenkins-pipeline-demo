@@ -1,101 +1,135 @@
 pipeline {
     agent any
 
-    environment {
-        JMETER_HOME = "C:\\apache-jmeter-5.6.3\\apache-jmeter-5.6.3"
-        REPORT_DIR = "report"
-        JTL_FILE = "results.jtl"
-        ZIP_FILE = "JMeter_Report.zip"
-        EMAIL_TO = "bavishasundar@gmail.com"
-    }
-
     stages {
 
         stage('Clean Workspace') {
             steps {
-                bat """
+                bat '''
                 echo Cleaning workspace...
-                if exist %REPORT_DIR% rmdir /s /q %REPORT_DIR%
-                if exist %JTL_FILE% del /q %JTL_FILE%
-                if exist %ZIP_FILE% del /q %ZIP_FILE%
-                """
+
+                if exist report rmdir /s /q report
+                if exist results.jtl del /q results.jtl
+                if exist JMeter_Report.zip del /q JMeter_Report.zip
+                '''
             }
         }
 
         stage('Run JMeter Test') {
             steps {
-                bat """
+                bat '''
                 echo Running JMeter Test...
-                jmeter -n -t jpetstore_jenkins/SCR01_Jpetstore.jmx -l %JTL_FILE%
-                """
+
+                jmeter -n ^
+                -t jpetstore_jenkins/SCR01_Jpetstore.jmx ^
+                -l results.jtl
+                '''
             }
         }
 
         stage('Generate HTML Report') {
             steps {
-                bat """
+                bat '''
                 echo Generating HTML Report...
-                jmeter -g %JTL_FILE% -o %REPORT_DIR%
-                """
+
+                jmeter -g results.jtl -o report
+                '''
             }
         }
 
         stage('Publish HTML Report in Jenkins UI') {
             steps {
                 publishHTML([
+                    allowMissing: false,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true,
                     reportDir: 'report',
                     reportFiles: 'index.html',
-                    reportName: 'JMeter HTML Report',
-                    keepAll: true,
-                    alwaysLinkToLastBuild: true,
-                    allowMissing: false
+                    reportName: 'JMeter HTML Report'
                 ])
             }
         }
 
-        stage('Zip Report') {
+        stage('Create ZIP Report') {
             steps {
-                powershell """
-                Compress-Archive -Path ${env.REPORT_DIR}\\* -DestinationPath ${env.ZIP_FILE} -Force
-                """
+                powershell '''
+                Compress-Archive -Path report\\* -DestinationPath JMeter_Report.zip -Force
+                '''
             }
         }
 
         stage('Send Email with ZIP Report') {
             steps {
-                script {
-                    def status = currentBuild.currentResult
+                emailext(
+                    to: 'bavishasundar@gmail.com',
 
-                    def subject = "JMeter Report - Build ${env.BUILD_NUMBER} - ${status}"
+                    subject: "JMeter Report - Build ${env.BUILD_NUMBER}",
 
-                    def body = """
-                    Hello,
+                    mimeType: 'text/html',
 
-                    Please find attached JMeter performance report ZIP.
+                    body: """
+                    <html>
+                    <body>
 
-                    Build: ${env.BUILD_NUMBER}
-                    Job: ${env.JOB_NAME}
-                    Status: ${status}
+                    <h2 style="color:green;">
+                    JMeter Test Execution Completed Successfully
+                    </h2>
 
-                    Thanks
-                    Jenkins CI
-                    """
+                    <table border="1" cellpadding="5" cellspacing="0">
 
-                    emailext(
-                        to: "${env.EMAIL_TO}",
-                        subject: subject,
-                        body: body,
-                        attachmentsPattern: "JMeter_Report.zip",
-                        mimeType: "text/plain"
-                    )
-                }
+                        <tr>
+                            <td><b>Job Name</b></td>
+                            <td>${env.JOB_NAME}</td>
+                        </tr>
+
+                        <tr>
+                            <td><b>Build Number</b></td>
+                            <td>${env.BUILD_NUMBER}</td>
+                        </tr>
+
+                        <tr>
+                            <td><b>Status</b></td>
+                            <td>SUCCESS</td>
+                        </tr>
+
+                    </table>
+
+                    <br>
+
+                    <p>
+                    Jenkins HTML Report:
+                    </p>
+
+                    <a href="${env.BUILD_URL}JMeter_20HTML_20Report/">
+                    Open Jenkins Report
+                    </a>
+
+                    <br><br>
+
+                    <p>
+                    JMeter ZIP report is attached with this email.
+                    </p>
+
+                    <br>
+
+                    <p>
+                    Regards,<br>
+                    Jenkins CI/CD
+                    </p>
+
+                    </body>
+                    </html>
+                    """,
+
+                    attachmentsPattern: 'JMeter_Report.zip'
+                )
             }
         }
     }
 
     post {
         always {
-            echo "Pipeline completed"
+            echo 'Pipeline completed'
         }
     }
 }
