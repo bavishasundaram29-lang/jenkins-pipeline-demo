@@ -20,9 +20,7 @@ pipeline {
                 bat '''
                 echo Running JMeter Test...
 
-                jmeter -n ^
-                -t jpetstore_jenkins/SCR01_Jpetstore.jmx ^
-                -l results.jtl
+                jmeter -n -t jpetstore_jenkins/SCR01_Jpetstore.jmx -l results.jtl
                 '''
             }
         }
@@ -37,7 +35,7 @@ pipeline {
             }
         }
 
-        stage('Publish HTML Report in Jenkins UI') {
+        stage('Publish Report in Jenkins UI') {
             steps {
                 publishHTML([
                     allowMissing: false,
@@ -50,7 +48,7 @@ pipeline {
             }
         }
 
-        stage('Create ZIP Report') {
+        stage('Create ZIP File') {
             steps {
                 powershell '''
                 Compress-Archive -Path report\\* -DestinationPath JMeter_Report.zip -Force
@@ -58,7 +56,7 @@ pipeline {
             }
         }
 
-        stage('Send Email with ZIP Report') {
+        stage('Send Report to Email') {
             steps {
                 emailext(
                     to: 'bavishasundar@gmail.com',
@@ -71,50 +69,21 @@ pipeline {
                     <html>
                     <body>
 
-                    <h2 style="color:green;">
-                    JMeter Test Execution Completed Successfully
-                    </h2>
+                    <h2>JMeter Execution Completed</h2>
 
-                    <table border="1" cellpadding="5" cellspacing="0">
+                    <p><b>Job Name:</b> ${env.JOB_NAME}</p>
 
-                        <tr>
-                            <td><b>Job Name</b></td>
-                            <td>${env.JOB_NAME}</td>
-                        </tr>
-
-                        <tr>
-                            <td><b>Build Number</b></td>
-                            <td>${env.BUILD_NUMBER}</td>
-                        </tr>
-
-                        <tr>
-                            <td><b>Status</b></td>
-                            <td>SUCCESS</td>
-                        </tr>
-
-                    </table>
-
-                    <br>
+                    <p><b>Build Number:</b> ${env.BUILD_NUMBER}</p>
 
                     <p>
-                    Jenkins HTML Report:
-                    </p>
-
+                    Jenkins UI Report:
                     <a href="${env.BUILD_URL}JMeter_20HTML_20Report/">
-                    Open Jenkins Report
+                    Open Report
                     </a>
-
-                    <br><br>
-
-                    <p>
-                    JMeter ZIP report is attached with this email.
                     </p>
 
-                    <br>
-
                     <p>
-                    Regards,<br>
-                    Jenkins CI/CD
+                    ZIP report attached with this email.
                     </p>
 
                     </body>
@@ -129,7 +98,7 @@ pipeline {
 
     post {
         always {
-            echo 'Pipeline completed'
+            echo 'Pipeline completed successfully'
         }
     }
 }
