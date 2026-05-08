@@ -74,7 +74,12 @@ pipeline {
                     <p><b>Job Name:</b> ${env.JOB_NAME}</p>
 
                     <p><b>Build Number:</b> ${env.BUILD_NUMBER}</p>
-
+                    <p>
+                    Jenkins UI Report:
+                    <a href="${env.BUILD_URL}JMeter_20HTML_20Report/">
+                    Open Report
+                    </a>
+                    </p>
                     
 
                     <p>
