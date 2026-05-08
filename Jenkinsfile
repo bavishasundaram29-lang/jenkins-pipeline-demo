@@ -39,9 +39,34 @@ pipeline {
 
                 jmeter -g results.jtl -o report
 
-                echo Report generated:
+                echo Report generated successfully
                 dir report
                 '''
+            }
+        }
+
+        stage('Send Email After Report') {
+            steps {
+                script {
+                    emailext (
+                        to: 'bavishasundar@gmail.com',
+                        subject: "📊 JMeter Report Ready - Build #${env.BUILD_NUMBER}",
+                        body: """
+Hi,
+
+Your JMeter HTML report has been generated successfully.
+
+✔ Build Number: ${env.BUILD_NUMBER}
+✔ Job: ${env.JOB_NAME}
+
+📁 Report is ready in Jenkins workspace
+📊 You can also view it in Jenkins UI (if publishHTML is enabled)
+
+Regards,
+Jenkins
+"""
+                    )
+                }
             }
         }
 
@@ -61,53 +86,11 @@ pipeline {
         stage('Zip Report') {
             steps {
                 bat '''
-                echo Zipping report...
+                echo Creating ZIP file...
 
                 powershell Compress-Archive -Path report\\* -DestinationPath JMeter_Report.zip -Force
                 '''
             }
-        }
-    }
-
-    post {
-
-        success {
-            emailext (
-                to: 'bavishasundar@gmail.com',
-                subject: "✅ JMeter Report SUCCESS - Build #${env.BUILD_NUMBER}",
-                body: """
-Hi,
-
-Your JMeter test completed successfully.
-
-✔ Jenkins Build: ${env.BUILD_NUMBER}
-✔ Job: ${env.JOB_NAME}
-
-📊 Report is available in Jenkins UI
-📎 ZIP report is attached
-
-Regards,
-Jenkins
-""",
-                attachmentsPattern: 'JMeter_Report.zip'
-            )
-        }
-
-        failure {
-            emailext (
-                to: 'bavishasundar@gmail.com',
-                subject: "❌ JMeter FAILED - Build #${env.BUILD_NUMBER}",
-                body: """
-Hi,
-
-Your JMeter test FAILED.
-
-Check Jenkins console logs.
-
-Build: ${env.BUILD_NUMBER}
-Job: ${env.JOB_NAME}
-"""
-            )
         }
     }
 }
