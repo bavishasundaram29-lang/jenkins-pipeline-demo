@@ -35,27 +35,35 @@ pipeline {
                 bat '''
                 echo Generating HTML Report...
 
-                IF NOT EXIST results.jtl (
-                    echo ERROR: results.jtl not found
-                    exit /b 1
-                )
+                IF EXIST report rmdir /S /Q report
 
                 jmeter -g results.jtl -o report
 
-                echo Report generated successfully
+                echo Report generated:
                 dir report
                 '''
+            }
+        }
+
+        stage('Publish Report in Jenkins UI') {
+            steps {
+                publishHTML([
+                    allowMissing: false,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true,
+                    reportDir: 'report',
+                    reportFiles: 'index.html',
+                    reportName: 'JMeter HTML Report'
+                ])
             }
         }
 
         stage('Zip Report') {
             steps {
                 bat '''
-                echo Creating ZIP file...
+                echo Zipping report...
 
                 powershell Compress-Archive -Path report\\* -DestinationPath JMeter_Report.zip -Force
-
-                dir
                 '''
             }
         }
@@ -70,18 +78,18 @@ pipeline {
                 body: """
 Hi,
 
-Your JMeter test executed successfully.
+Your JMeter test completed successfully.
 
-Build Number: ${env.BUILD_NUMBER}
-Job Name: ${env.JOB_NAME}
+✔ Jenkins Build: ${env.BUILD_NUMBER}
+✔ Job: ${env.JOB_NAME}
 
-Please find the attached JMeter HTML report (ZIP).
+📊 Report is available in Jenkins UI
+📎 ZIP report is attached
 
 Regards,
 Jenkins
 """,
-                attachmentsPattern: 'JMeter_Report.zip',
-                mimeType: 'text/plain'
+                attachmentsPattern: 'JMeter_Report.zip'
             )
         }
 
@@ -92,17 +100,13 @@ Jenkins
                 body: """
 Hi,
 
-Your JMeter test has FAILED.
+Your JMeter test FAILED.
 
-Please check Jenkins logs for details.
+Check Jenkins console logs.
 
-Build Number: ${env.BUILD_NUMBER}
-Job Name: ${env.JOB_NAME}
-
-Regards,
-Jenkins
-""",
-                mimeType: 'text/plain'
+Build: ${env.BUILD_NUMBER}
+Job: ${env.JOB_NAME}
+"""
             )
         }
     }
