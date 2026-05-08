@@ -50,7 +50,7 @@ pipeline {
                 script {
                     emailext (
                         to: 'bavishasundar@gmail.com',
-                        subject: "📊 JMeter Report Ready - Build #${env.BUILD_NUMBER}",
+                        subject: " JMeter Report Ready - Build #${env.BUILD_NUMBER}",
                         body: """
 Hi,
 
@@ -59,8 +59,8 @@ Your JMeter HTML report has been generated successfully.
 ✔ Build Number: ${env.BUILD_NUMBER}
 ✔ Job: ${env.JOB_NAME}
 
-📁 Report is ready in Jenkins workspace
-📊 You can also view it in Jenkins UI (if publishHTML is enabled)
+ Report is ready in Jenkins workspace
+ You can also view it in Jenkins UI (if publishHTML is enabled)
 
 Regards,
 Jenkins
