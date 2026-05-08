@@ -1,50 +1,88 @@
-stage('Send Final Report Email') {
+pipeline {
+    agent any
 
-    script {
+    stages {
 
-        def buildStatus = currentBuild.currentResult
-        def reportUrl = "${env.BUILD_URL}JMeter_20HTML_20Report/"
-
-        def emailSubject = ""
-        def emailBody = ""
-
-        if (buildStatus == "SUCCESS") {
-
-            emailSubject = "✅ SUCCESS: JMeter Report - Build ${env.BUILD_NUMBER}"
-
-            emailBody = """
-            <h2 style="color:green;">JMeter Execution Successful</h2>
-
-            <p><b>Build:</b> ${env.BUILD_NUMBER}</p>
-            <p><b>Job:</b> ${env.JOB_NAME}</p>
-
-            <p><b>📊 Report URL:</b></p>
-            <a href="${reportUrl}">Open JMeter HTML Report</a>
-
-            <br/><br/>
-            <p><b>🔗 Jenkins Build:</b></p>
-            <a href="${env.BUILD_URL}">Open Build</a>
-            """
-
-        } else {
-
-            emailSubject = "❌ FAILURE: JMeter Report - Build ${env.BUILD_NUMBER}"
-
-            emailBody = """
-            <h2 style="color:red;">JMeter Execution Failed</h2>
-
-            <p><b>Build:</b> ${env.BUILD_NUMBER}</p>
-
-            <p><b>🔗 Build URL:</b></p>
-            <a href="${env.BUILD_URL}">Open Build</a>
-            """
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
         }
 
-        emailext(
-            to: 'bavishasundar@gmail.com',
-            subject: emailSubject,
-            mimeType: 'text/html',
-            body: emailBody
-        )
+        stage('Clean Workspace') {
+            steps {
+                bat '''
+                    echo Cleaning workspace...
+                    IF EXIST report rmdir /S /Q report
+                    IF EXIST results.jtl del /Q results.jtl
+                    IF EXIST JMeter_Report.zip del /Q JMeter_Report.zip
+                    echo Cleanup done
+                '''
+            }
+        }
+
+        stage('Run JMeter Test') {
+            steps {
+                bat '''
+                    echo Running JMeter...
+                    jmeter -n -t jpetstore_jenkins/SCR01_Jpetstore.jmx -l results.jtl
+                '''
+            }
+        }
+
+        stage('Generate HTML Report') {
+            steps {
+                bat '''
+                    echo Generating HTML Report...
+                    jmeter -g results.jtl -o report
+                '''
+            }
+        }
+
+        stage('Publish Report in Jenkins UI') {
+            steps {
+                publishHTML([
+                    allowMissing: false,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true,
+                    reportDir: 'report',
+                    reportFiles: 'index.html',
+                    reportName: 'JMeter_HTML_Report'
+                ])
+            }
+        }
+
+        stage('Create ZIP Report') {
+            steps {
+                bat '''
+                    echo Creating ZIP...
+                    powershell -Command "Compress-Archive -Path report\\* -DestinationPath JMeter_Report.zip -Force"
+                '''
+            }
+        }
+
+        stage('Send Email with ZIP Report') {
+            steps {
+                script {
+
+                    emailext(
+                        to: 'bavishasundar@gmail.com',
+                        subject: "JMeter Report - Build ${env.BUILD_NUMBER}",
+                        mimeType: 'text/html',
+                        body: """
+                            <h2>JMeter Execution Completed</h2>
+
+                            <p><b>Build:</b> ${env.BUILD_NUMBER}</p>
+                            <p><b>Status:</b> ${currentBuild.currentResult}</p>
+
+                            <p>The full report is attached as ZIP.</p>
+                        """,
+
+                        // 🔥 IMPORTANT: ZIP attachment
+                        attachmentsPattern: 'JMeter_Report.zip, results.jtl'
+                    )
+                }
+            }
+        }
     }
 }
