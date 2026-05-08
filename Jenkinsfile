@@ -1,85 +1,50 @@
 stage('Send Final Report Email') {
-    steps {
-        script {
 
-            def buildStatus = currentBuild.currentResult
-            def reportUrl = "${env.BUILD_URL}JMeter_20HTML_20Report/"
+    script {
 
-            def emailSubject = ""
-            def emailBody = ""
+        def buildStatus = currentBuild.currentResult
+        def reportUrl = "${env.BUILD_URL}JMeter_20HTML_20Report/"
 
-            if (buildStatus == "SUCCESS") {
+        def emailSubject = ""
+        def emailBody = ""
 
-                emailSubject = "✅ SUCCESS: JMeter Report - Build ${env.BUILD_NUMBER}"
+        if (buildStatus == "SUCCESS") {
 
-                emailBody = """
-                <html>
-                <body>
-                <h2 style="color:green;">JMeter Test Execution Successful</h2>
+            emailSubject = "✅ SUCCESS: JMeter Report - Build ${env.BUILD_NUMBER}"
 
-                <p>Hello,</p>
+            emailBody = """
+            <h2 style="color:green;">JMeter Execution Successful</h2>
 
-                <p>Your JMeter performance test has been completed successfully.</p>
+            <p><b>Build:</b> ${env.BUILD_NUMBER}</p>
+            <p><b>Job:</b> ${env.JOB_NAME}</p>
 
-                <table border="1" cellpadding="5" cellspacing="0">
-                    <tr>
-                        <td><b>Build Number</b></td>
-                        <td>${env.BUILD_NUMBER}</td>
-                    </tr>
-                    <tr>
-                        <td><b>Job Name</b></td>
-                        <td>${env.JOB_NAME}</td>
-                    </tr>
-                    <tr>
-                        <td><b>Status</b></td>
-                        <td style="color:green;"><b>SUCCESS</b></td>
-                    </tr>
-                </table>
+            <p><b>📊 Report URL:</b></p>
+            <a href="${reportUrl}">Open JMeter HTML Report</a>
 
-                <br/>
+            <br/><br/>
+            <p><b>🔗 Jenkins Build:</b></p>
+            <a href="${env.BUILD_URL}">Open Build</a>
+            """
 
-                <p><b>📊 Jenkins HTML Report:</b></p>
-                <a href="${reportUrl}">Click here to view JMeter Report</a>
+        } else {
 
-                <br/><br/>
-                <p><b>Build Details:</b></p>
-                <a href="${env.BUILD_URL}">Open Jenkins Build</a>
+            emailSubject = "❌ FAILURE: JMeter Report - Build ${env.BUILD_NUMBER}"
 
-                <br/><br/>
-                <p>Regards,<br/>Jenkins CI/CD</p>
-                </body>
-                </html>
-                """
+            emailBody = """
+            <h2 style="color:red;">JMeter Execution Failed</h2>
 
-            } else {
+            <p><b>Build:</b> ${env.BUILD_NUMBER}</p>
 
-                emailSubject = "❌ FAILURE: JMeter Report - Build ${env.BUILD_NUMBER}"
-
-                emailBody = """
-                <html>
-                <body>
-                <h2 style="color:red;">JMeter Test Failed</h2>
-
-                <p>Hello,</p>
-
-                <p>The JMeter pipeline has failed. Please check logs.</p>
-
-                <p><b>Jenkins Build:</b></p>
-                <a href="${env.BUILD_URL}">Open Build</a>
-
-                <br/><br/>
-                <p>Regards,<br/>Jenkins CI/CD</p>
-                </body>
-                </html>
-                """
-            }
-
-            emailext(
-                to: 'bavishasundar@gmail.com',
-                subject: emailSubject,
-                mimeType: 'text/html',
-                body: emailBody
-            )
+            <p><b>🔗 Build URL:</b></p>
+            <a href="${env.BUILD_URL}">Open Build</a>
+            """
         }
+
+        emailext(
+            to: 'bavishasundar@gmail.com',
+            subject: emailSubject,
+            mimeType: 'text/html',
+            body: emailBody
+        )
     }
 }
